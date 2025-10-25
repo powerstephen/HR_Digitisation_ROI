@@ -21,12 +21,12 @@ const EMP_DRIVERS: Driver[] = [
 const MGR_DRIVERS: Driver[] = [
   { key: "okrMonthly",        label: "Managerial OKRs (monthly updates)",       effect: 0.75, unit: "hrs_per_mgr" },
   { key: "leaveApprovals",    label: "Faster leave approvals & visibility",     effect: 0.5,  unit: "hrs_per_mgr" },
-  { key: "perfCycles",        label: "Performance cycles (avg. monthly effect)",effect: 0.5,  unit: "hrs_per_mgr" },
+  { key: "perfCycles",        label: "Performance cycles (avg monthly)",        effect: 0.5,  unit: "hrs_per_mgr" },
 ];
 
 export default function FactorialRoiCalculator() {
-  /* Wizard step 1..3 */
-  const [step, setStep] = useState<number>(1);
+  /* Wizard step 1..3 (default to 2 so you SEE the OKR box immediately) */
+  const [step, setStep] = useState<number>(2);
 
   /* Pricing & team (Step 1) */
   const [currency, setCurrency] = useState<string>("EUR");
@@ -48,7 +48,7 @@ export default function FactorialRoiCalculator() {
 
   /* Drivers state (Step 2) */
   const [empDriverOn, setEmpDriverOn] = useState<Record<string, boolean>>({});
-  const [mgrDriverOn, setMgrDriverOn] = useState<Record<string, boolean>>({ okrMonthly: true }); // OKRs on by default
+  const [mgrDriverOn, setMgrDriverOn] = useState<Record<string, boolean>>({ okrMonthly: true });
 
   /* Derived effects from drivers */
   const extraMinutesPerEmp = useMemo(
@@ -113,19 +113,21 @@ export default function FactorialRoiCalculator() {
   ], [totalSavingsAnnual, annualTotalCostY1, annualSoftwareCost]);
 
   /* ---------- UI ---------- */
+  const cardBorder = { border: "1px solid rgba(229,25,67,0.18)" }; // ALWAYS visible
+
   return (
     <div className="space-y-6">
-      {/* Stepper */}
-      <div className="stepper">
-        <span className={`step-dot ${step === 1 ? "step-dot-active" : ""}`} />
-        <span className={`step-dot ${step === 2 ? "step-dot-active" : ""}`} />
-        <span className={`step-dot ${step === 3 ? "step-dot-active" : ""}`} />
+      {/* Tabs / Stepper */}
+      <div className="tabs mb-2">
+        <button className={`tab ${step === 1 ? "tab-active" : "tab-inactive"}`} onClick={() => setStep(1)}>1. Company & Pricing</button>
+        <button className={`tab ${step === 2 ? "tab-active" : "tab-inactive"}`} onClick={() => setStep(2)}>2. Drivers</button>
+        <button className={`tab ${step === 3 ? "tab-active" : "tab-inactive"}`} onClick={() => setStep(3)}>3. Results</button>
       </div>
 
       {/* Slides */}
       {step === 1 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="card-brand p-6 space-y-4">
+          <div className="card p-6 space-y-4" style={cardBorder}>
             <h2 className="text-lg font-medium">Company & Pricing</h2>
             <SelectRow label="Currency" value={currency} onChange={setCurrency} options={["EUR","USD","GBP","AUD"]} />
             <NumberRow label="Employees" value={employees} onChange={setEmployees} min={1} step={1} />
@@ -133,7 +135,7 @@ export default function FactorialRoiCalculator() {
             <NumberRow label={`One-time implementation (${currency})`} value={oneTimeImplementation} onChange={setOneTimeImplementation} min={0} step={100} />
           </div>
 
-          <div className="card-brand p-6 space-y-4">
+          <div className="card p-6 space-y-4" style={cardBorder}>
             <h2 className="text-lg font-medium">HR Admin Time (baseline)</h2>
             <NumberRow label={`HR hourly cost (${currency})`} value={hrHourly} onChange={setHrHourly} min={0} step={1} />
             <SliderRow label="Minutes saved / employee / month (baseline)" value={baseMinutesPerEmpPerMonth} setValue={setBaseMinutesPerEmpPerMonth} min={0} max={120} step={5} suffix="min" />
@@ -142,7 +144,7 @@ export default function FactorialRoiCalculator() {
             </p>
           </div>
 
-          <div className="card-brand p-6 space-y-3">
+          <div className="card p-6 space-y-3" style={cardBorder}>
             <h2 className="text-lg font-medium">At a Glance</h2>
             <SummaryRow label="Software cost (annual)">{fmt(annualSoftwareCost, currency)}</SummaryRow>
             {oneTimeImplementation > 0 && <SummaryRow label="One-time implementation (Y1)">{fmt(oneTimeImplementation, currency)}</SummaryRow>}
@@ -156,7 +158,7 @@ export default function FactorialRoiCalculator() {
 
       {step === 2 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="card-brand p-6 space-y-4">
+          <div className="card p-6 space-y-4" style={cardBorder}>
             <h2 className="text-lg font-medium">Employee Drivers</h2>
             {EMP_DRIVERS.map(d => (
               <CheckboxRow
@@ -175,7 +177,7 @@ export default function FactorialRoiCalculator() {
             </SummaryRow>
           </div>
 
-          <div className="card-brand p-6 space-y-4">
+          <div className="card p-6 space-y-4" style={cardBorder}>
             <h2 className="text-lg font-medium">Manager Drivers</h2>
             <ToggleRow label="Include manager time savings" checked={managersEnabled} onToggle={() => setManagersEnabled(s => !s)} />
             {managersEnabled && (
@@ -206,7 +208,7 @@ export default function FactorialRoiCalculator() {
             )}
           </div>
 
-          <div className="card-brand p-6 space-y-4">
+          <div className="card p-6 space-y-4" style={cardBorder}>
             <h2 className="text-lg font-medium">Other Savings</h2>
             <NumberRow label={`Other savings (monthly) (${currency})`} value={otherSavingsMonthly} onChange={setOtherSavingsMonthly} min={0} step={50} hint="Tool consolidation, error reduction, avoided fines, reduced overtime, etc." />
             <div className="divider" />
@@ -219,14 +221,14 @@ export default function FactorialRoiCalculator() {
 
       {step === 3 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="card-brand p-6 space-y-3">
+          <div className="card p-6 space-y-3" style={cardBorder}>
             <h2 className="text-lg font-medium">Costs</h2>
             <SummaryRow label="Software cost (annual)">{fmt(annualSoftwareCost, currency)}</SummaryRow>
             {oneTimeImplementation > 0 && <SummaryRow label="One-time implementation (Y1)">{fmt(oneTimeImplementation, currency)}</SummaryRow>}
             <SummaryRow label="Total cost (Y1)"><strong>{fmt(annualTotalCostY1, currency)}</strong></SummaryRow>
           </div>
 
-          <div className="card-brand p-6 space-y-3">
+          <div className="card p-6 space-y-3" style={cardBorder}>
             <h2 className="text-lg font-medium">Savings</h2>
             <SummaryRow label="Admin savings (annual)">{fmt(adminSavingsMonthly * 12, currency)}</SummaryRow>
             {managersEnabled && <SummaryRow label="Manager savings (annual)">{fmt(managerSavingsMonthly * 12, currency)}</SummaryRow>}
@@ -234,16 +236,16 @@ export default function FactorialRoiCalculator() {
             <SummaryRow label="Total savings (annual)"><strong>{fmt(totalSavingsAnnual, currency)}</strong></SummaryRow>
           </div>
 
-          <div className="card-brand p-6 space-y-3">
+          <div className="card p-6 space-y-3" style={cardBorder}>
             <h2 className="text-lg font-medium">Outcomes</h2>
             <SummaryRow label="Net benefit (Y1)"><strong>{fmt(netBenefitY1, currency)}</strong></SummaryRow>
             <SummaryRow label="Net benefit (Y2+)"><strong>{fmt(netBenefitY2, currency)}</SummaryRow>
             <SummaryRow label="ROI (Y1)"><strong>{Number.isFinite(roiY1) ? `${roiY1.toFixed(0)}%` : "—"}</strong></SummaryRow>
-            <SummaryRow label="ROI (Y2+)"><strong>{Number.isFinite(roiY2) ? `${roiY2.toFixed(0)}%` : "—"}</SummaryRow>
+            <SummaryRow label="ROI (Y2+)"><strong>{Number.isFinite(roiY2) ? `${roiY2.toFixed(0)}%` : "—"}</strong></SummaryRow>
             <SummaryRow label="Payback period"><strong>{Number.isFinite(paybackMonths) ? `${paybackMonths.toFixed(1)} months` : "> 24 months (adjust assumptions)"}</SummaryRow>
           </div>
 
-          <div className="card-brand p-6 lg:col-span-3">
+          <div className="card p-6 lg:col-span-3" style={cardBorder}>
             <h3 className="text-base font-medium mb-4">Cost vs Savings (Annual)</h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
@@ -303,7 +305,7 @@ function SelectRow({ label, value, onChange, options }: { label: string; value: 
   return (
     <div className="space-y-1">
       <label className="label">{label}</label>
-      <select className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-left focus:outline-none" value={value} onChange={(e) => onChange(e.target.value)} style={{ boxShadow: "0 0 0 2px transparent" }}>
+      <select className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-left focus:outline-none" value={value} onChange={(e) => onChange(e.target.value)}>
         {options.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
       </select>
     </div>
@@ -370,7 +372,7 @@ function exportCSV(data: any) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "factorial-roi.csv";
+  a.download = "hr-digitisation-roi.csv";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
