@@ -1,5 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: { ignoreDuringBuilds: true } // don't block deploys on lint
+  eslint: { ignoreDuringBuilds: true }
 };
 export default nextConfig;
