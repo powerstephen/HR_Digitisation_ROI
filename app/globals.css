@@ -2,34 +2,42 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Factorial-ish brand variables */
+/* Brand variables */
 :root {
   --brand-primary: #E51943;   /* red */
   --brand-secondary: #009698; /* viridian green */
 }
 
 @layer base {
-  a { @apply text-factorial-red; }
-  strong { @apply text-factorial-ink; }
+  a { @apply text-[var(--brand-primary)]; }
+  strong { @apply text-gray-900; }
 }
 
 @layer components {
-  .card { @apply rounded-2xl bg-white shadow-soft; }
-  /* Subtle brand border */
-  .card-brand { @apply card border border-factorial-red/10; }
+  .card { @apply rounded-2xl bg-white shadow-[0_8px_24px_rgba(0,0,0,0.06)]; }
 
-  .btn  { @apply inline-flex items-center justify-center rounded-2xl px-4 py-2 font-medium transition bg-[var(--brand-primary)] text-white hover:opacity-90; }
-  .btn-ghost { @apply inline-flex items-center justify-center rounded-2xl px-4 py-2 font-medium transition text-factorial-ink hover:bg-black/5; }
+  /* Subtle brand border - uses CSS var so it NEVER depends on Tailwind theme */
+  .card-brand {
+    @apply card border;
+    border-color: color-mix(in srgb, var(--brand-primary) 15%, transparent);
+  }
+
+  .btn  { @apply inline-flex items-center justify-center rounded-2xl px-4 py-2 font-medium transition text-white; background: var(--brand-primary); }
+  .btn:hover { opacity: .9; }
+  .btn-ghost { @apply inline-flex items-center justify-center rounded-2xl px-4 py-2 font-medium transition text-gray-900; }
+  .btn-ghost:hover { @apply bg-black/5; }
 
   .input{
-    @apply w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right
-    focus:outline-none focus:ring-2 focus:ring-[var(--brand-secondary)];
+    @apply w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right focus:outline-none;
+    box-shadow: 0 0 0 0 rgba(0,0,0,0);
   }
+  .input:focus { box-shadow: 0 0 0 2px var(--brand-secondary); }
+
   .label { @apply text-sm text-gray-700; }
   .divider { @apply h-px bg-gray-200 my-2; }
 
   /* Stepper */
   .stepper { @apply flex items-center justify-center gap-2 text-xs font-medium; }
   .step-dot { @apply h-2.5 w-2.5 rounded-full bg-gray-300; }
-  .step-dot-active { @apply bg-[var(--brand-primary)]; }
+  .step-dot-active { background: var(--brand-primary); }
 }
