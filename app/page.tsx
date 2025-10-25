@@ -3,13 +3,13 @@ import dynamic from "next/dynamic";
 
 const FactorialRoiCalculator = dynamic(
   () => import("../components/FactorialRoiCalculator"),
-  { ssr: false } // Recharts renders on client
+  { ssr: false }
 );
 
 export default function Page() {
   return (
     <main className="min-h-screen">
-      {/* Top bar */}
+      {/* Top bar with logo (right) */}
       <div className="w-full bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/50 border-b border-gray-200">
         <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -21,7 +21,7 @@ export default function Page() {
           <div className="flex items-center gap-3">
             <span className="text-xs text-gray-500">Powered by</span>
             <Image
-              src="/logo.jpg"        // <- add this image in /public
+              src="/logo.jpg"
               width={28}
               height={28}
               alt="Logo"
@@ -32,11 +32,10 @@ export default function Page() {
         </div>
       </div>
 
-      {/* Page content */}
       <section className="mx-auto max-w-6xl p-6 md:p-10">
         <header className="mb-8">
           <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-factorial-red">
-            Factorial ROI Calculator
+            HR Digitisation ROI Calculator
           </h1>
           <p className="text-sm md:text-base text-gray-600 mt-2">
             Plug in your assumptions to estimate payback, annual savings and ROI.
@@ -46,7 +45,7 @@ export default function Page() {
         <FactorialRoiCalculator />
 
         <footer className="py-10 text-center text-xs text-gray-500">
-          © {new Date().getFullYear()} ROI demo. Not affiliated with Factorial.
+          © {new Date().getFullYear()} ROI demo.
         </footer>
       </section>
     </main>
