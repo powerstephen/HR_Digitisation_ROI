@@ -48,7 +48,7 @@ export default function FactorialRoiCalculator() {
 
   /* Drivers state (Step 2) */
   const [empDriverOn, setEmpDriverOn] = useState<Record<string, boolean>>({});
-  const [mgrDriverOn, setMgrDriverOn] = useState<Record<string, boolean>>({ okrMonthly: true }); // enable OKRs by default
+  const [mgrDriverOn, setMgrDriverOn] = useState<Record<string, boolean>>({ okrMonthly: true }); // OKRs on by default
 
   /* Derived effects from drivers */
   const extraMinutesPerEmp = useMemo(
@@ -240,7 +240,7 @@ export default function FactorialRoiCalculator() {
             <SummaryRow label="Net benefit (Y2+)"><strong>{fmt(netBenefitY2, currency)}</SummaryRow>
             <SummaryRow label="ROI (Y1)"><strong>{Number.isFinite(roiY1) ? `${roiY1.toFixed(0)}%` : "—"}</strong></SummaryRow>
             <SummaryRow label="ROI (Y2+)"><strong>{Number.isFinite(roiY2) ? `${roiY2.toFixed(0)}%` : "—"}</SummaryRow>
-            <SummaryRow label="Payback period"><strong>{Number.isFinite(paybackMonths) ? `${paybackMonths.toFixed(1)} months` : "> 24 months (adjust assumptions)"}</strong></SummaryRow>
+            <SummaryRow label="Payback period"><strong>{Number.isFinite(paybackMonths) ? `${paybackMonths.toFixed(1)} months` : "> 24 months (adjust assumptions)"}</SummaryRow>
           </div>
 
           <div className="card-brand p-6 lg:col-span-3">
@@ -303,7 +303,7 @@ function SelectRow({ label, value, onChange, options }: { label: string; value: 
   return (
     <div className="space-y-1">
       <label className="label">{label}</label>
-      <select className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-left focus:outline-none focus:ring-2 focus:ring-[var(--brand-secondary)]" value={value} onChange={(e) => onChange(e.target.value)}>
+      <select className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-left focus:outline-none" value={value} onChange={(e) => onChange(e.target.value)} style={{ boxShadow: "0 0 0 2px transparent" }}>
         {options.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
       </select>
     </div>
