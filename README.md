@@ -1,10 +1,10 @@
-# Factorial ROI Calculator
+# HR Digitisation ROI
 
-Next.js (App Router) + Tailwind + Recharts. Brand: Factorial red (#E51943) and viridian (#009698).
+Next.js (App Router) + Tailwind + Recharts.
 
 ## Local
 npm install
 npm run dev
 
-## Production
-Deploy to Vercel. No extra config required.
+## Deploy
+Push to GitHub, import on Vercel. No extra config.
