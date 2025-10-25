@@ -9,35 +9,24 @@
 }
 
 @layer base {
-  a { @apply text-[var(--brand-primary)]; }
-  strong { @apply text-gray-900; }
+  body { @apply bg-factorial-mist text-factorial-ink; }
+  a { @apply text-factorial-red; }
 }
 
 @layer components {
-  .card { @apply rounded-2xl bg-white shadow-[0_8px_24px_rgba(0,0,0,0.06)]; }
-
-  /* Subtle brand border - uses CSS var so it NEVER depends on Tailwind theme */
-  .card-brand {
-    @apply card border;
-    border-color: color-mix(in srgb, var(--brand-primary) 15%, transparent);
-  }
-
-  .btn  { @apply inline-flex items-center justify-center rounded-2xl px-4 py-2 font-medium transition text-white; background: var(--brand-primary); }
+  .card { @apply rounded-2xl bg-white shadow-soft; }
+  .btn  { @apply inline-flex items-center justify-center rounded-2xl px-4 py-2 font-medium text-white; background: var(--brand-primary); }
   .btn:hover { opacity: .9; }
-  .btn-ghost { @apply inline-flex items-center justify-center rounded-2xl px-4 py-2 font-medium transition text-gray-900; }
-  .btn-ghost:hover { @apply bg-black/5; }
+  .btn-ghost { @apply inline-flex items-center justify-center rounded-2xl px-4 py-2 font-medium text-gray-900 hover:bg-black/5; }
 
   .input{
     @apply w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right focus:outline-none;
-    box-shadow: 0 0 0 0 rgba(0,0,0,0);
   }
-  .input:focus { box-shadow: 0 0 0 2px var(--brand-secondary); }
-
   .label { @apply text-sm text-gray-700; }
   .divider { @apply h-px bg-gray-200 my-2; }
 
-  /* Stepper */
-  .stepper { @apply flex items-center justify-center gap-2 text-xs font-medium; }
-  .step-dot { @apply h-2.5 w-2.5 rounded-full bg-gray-300; }
-  .step-dot-active { background: var(--brand-primary); }
+  .tabs { @apply flex gap-2 justify-center; }
+  .tab { @apply px-3 py-1.5 rounded-full text-sm border; }
+  .tab-active { @apply bg-white border-gray-300 text-factorial-ink; box-shadow: 0 6px 20px rgba(0,0,0,0.06); }
+  .tab-inactive { @apply bg-transparent border-transparent text-gray-500 hover:bg-white/60; }
 }
