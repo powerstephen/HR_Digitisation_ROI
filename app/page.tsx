@@ -9,24 +9,29 @@ const FactorialRoiCalculator = dynamic(
 export default function Page() {
   return (
     <main className="min-h-screen">
+      {/* VISUAL MARKER */}
+      <div style={{background:"#E51943", color:"white", textAlign:"center", padding:"8px 12px"}}>
+        <strong>MINIMAL WIZARD v1</strong> — if you can read this, the new code is LIVE
+      </div>
+
       {/* Top bar with logo (right) */}
       <div className="w-full bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/50 border-b border-gray-200">
         <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="inline-block h-2 w-2 rounded-full bg-factorial-red" />
-            <span className="text-sm font-semibold tracking-wide text-factorial-ink/80">
+            <span className="inline-block h-2 w-2 rounded-full" style={{background:"#E51943"}} />
+            <span className="text-sm font-semibold tracking-wide text-black/70">
               ROI Demo
             </span>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-gray-500">Powered by</span>
-            <Image
-              src="/logo.jpg"
+            {/* Use favicon.jpg to avoid missing /logo.jpg */}
+            <img
+              src="/favicon.jpg"
               width={28}
               height={28}
               alt="Logo"
-              className="rounded-md ring-1 ring-gray-200"
-              priority
+              style={{ borderRadius: 6, border: "1px solid #e5e7eb"}}
             />
           </div>
         </div>
@@ -34,11 +39,11 @@ export default function Page() {
 
       <section className="mx-auto max-w-6xl p-6 md:p-10">
         <header className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-factorial-red">
+          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight" style={{color:"#E51943"}}>
             HR Digitisation ROI Calculator
           </h1>
           <p className="text-sm md:text-base text-gray-600 mt-2">
-            Plug in your assumptions to estimate payback, annual savings and ROI.
+            Minimal build to confirm wiring. Tabs + content only.
           </p>
         </header>
 
