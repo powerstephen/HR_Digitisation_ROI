@@ -6,9 +6,11 @@ export const metadata = {
     shortcut: "/favicon.jpeg",
     apple: "/favicon.jpeg",
   },
-  // If you add the file below in /public, keep this; otherwise delete the line.
+  // If you keep /public/site.webmanifest, keep this line; otherwise remove it
   manifest: "/site.webmanifest",
 };
+
+import "./globals.css"; // <- ensure Tailwind + global styles load
 
 export default function RootLayout({
   children,
