@@ -46,7 +46,7 @@ const fmt = (n: number, currency: Currency) =>
   new Intl.NumberFormat(undefined, { style: "currency", currency }).format(n);
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 
-export default function RoiQuestionnaireV3() {
+export default function RoiQuestionnaire() {
   const [step, setStep] = useState<number>(1);
 
   // Step 1: Profile
