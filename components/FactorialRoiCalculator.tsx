@@ -1,136 +1,509 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
-/** This minimal version avoids charts & heavy libs to guarantee a clean compile.
-    Once this is live, we’ll layer back the calculations & Recharts. */
+/**
+ * Questionnaire-driven ROI model for HR digitisation (Factorial-like modules).
+ * Steps:
+ * 1) Profile (role, industry, size, rates, pricing)
+ * 2) Interests (which modules)
+ * 3) Current Methods (how each module is managed today)
+ * 4) Volumes (how often things happen)
+ * 5) Results (savings, ROI, payback, pain points, CSV)
+ *
+ * Design goals:
+ * - Opinionated, transparent assumptions with inline comments
+ * - Uses inline borders (so brand border is ALWAYS visible)
+ * - No charts (kept minimal to avoid build issues); we can add later
+ */
 
-export default function FactorialRoiCalculator() {
-  const [step, setStep] = useState<number>(2); // default to 2 so you SEE the OKR checkbox
+/* ---------------------------- Types & Constants ---------------------------- */
 
-  // simple working state
-  const [currency, setCurrency] = useState<string>("EUR");
+type Currency = "EUR" | "USD" | "GBP" | "AUD";
+type ModuleKey = "time" | "talent" | "payroll" | "performance" | "docs";
+type Method = "manual" | "spreadsheets" | "multi" | "basic";
+
+/** Modules shown on Step 2 */
+const MODULES: Record<ModuleKey, { label: string; desc: string }> = {
+  time:        { label: "Time Management",     desc: "Leave requests, timesheets, scheduling" },
+  talent:      { label: "Talent Management",   desc: "Hiring, onboarding/offboarding" },
+  payroll:     { label: "Payroll",             desc: "Payroll runs, corrections, compliance" },
+  performance: { label: "Performance/OKRs",    desc: "Goal tracking, reviews, feedback" },
+  docs:        { label: "Documents & e-sign",  desc: "Templates, e-signature, document workflows" },
+};
+
+/** Present options for how a module is managed today (Step 3) */
+const METHOD_LABEL: Record<Method, string> = {
+  manual: "Manual / Paper",
+  spreadsheets: "Spreadsheets & Email",
+  multi: "Multiple Disconnected Systems",
+  basic: "Basic HRIS (limited automation)",
+};
+
+/**
+ * Time-saved heuristics by module + method.
+ * Units:
+ *  - time: minutes saved per event (leave request, timesheet submit)
+ *  - talent: minutes saved per hire
+ *  - payroll: minutes saved per employee per pay-run
+ *  - performance: hours saved per manager per month (ongoing)
+ *  - docs: minutes saved per document
+ *
+ * Rationale: manual → spreadsheets → multi → basic HRIS show decreasing waste.
+ */
+const TIME_SAVED = {
+  time: {
+    leavePerReqMin: { manual: 10, spreadsheets: 7, multi: 5, basic: 3 },
+    timesheetPerSubmitMin: { manual: 3, spreadsheets: 2, multi: 1.5, basic: 1 },
+  },
+  talent: {
+    perHireMin: { manual: 180, spreadsheets: 120, multi: 90, basic: 60 },
+  },
+  payroll: {
+    perEmpPerRunMin: { manual: 6, spreadsheets: 4, multi: 3, basic: 2 },
+  },
+  performance: {
+    perMgrPerMonthHours: { manual: 1.2, spreadsheets: 1.0, multi: 0.8, basic: 0.6 },
+  },
+  docs: {
+    perDocMin: { manual: 12, spreadsheets: 8, multi: 6, basic: 4 },
+  },
+} as const;
+
+/** How savings split between HR admin vs Managers (by module) */
+const SPLIT = {
+  time:        { hr: 0.7, mgr: 0.3 },
+  talent:      { hr: 0.8, mgr: 0.2 },
+  payroll:     { hr: 0.9, mgr: 0.1 },
+  performance: { hr: 0.2, mgr: 0.8 },
+  docs:        { hr: 0.7, mgr: 0.3 },
+} as const;
+
+/* ---------------------------- Small Utilities ----------------------------- */
+
+const fmt = (n: number, currency: Currency) =>
+  new Intl.NumberFormat(undefined, { style: "currency", currency }).format(n);
+
+const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
+
+/* -------------------------------- Component -------------------------------- */
+
+export default function FactorialRoiQuestionnaire() {
+  const [step, setStep] = useState<number>(1);
+
+  /* Step 1: Profile */
+  const [jobTitle, setJobTitle] = useState<string>("HR Manager");
+  const [industry, setIndustry] = useState<string>("Technology");
+  const [currency, setCurrency] = useState<Currency>("EUR");
   const [employees, setEmployees] = useState<number>(150);
-  const [okr, setOkr] = useState<boolean>(true);
+  const [managers, setManagers] = useState<number>(Math.max(1, Math.round(150 / 10)));
+  const [hrHourly, setHrHourly] = useState<number>(35);
+  const [mgrHourly, setMgrHourly] = useState<number>(45);
+  const [pricePerEmployee, setPricePerEmployee] = useState<number>(8);
+  const [oneTimeImplementation, setOneTimeImplementation] = useState<number>(0);
 
-  const cardBorder = {
-    border: "2px solid rgba(229,25,67,0.25)",
-    borderRadius: "16px",
-    background: "white",
-    boxShadow: "0 8px 24px rgba(0,0,0,0.06)"
-  } as const;
+  /* Step 2: Interests */
+  const [selectedMods, setSelectedMods] = useState<Record<ModuleKey, boolean>>({
+    time: true, talent: true, payroll: true, performance: true, docs: true,
+  });
+
+  /* Step 3: Current Methods per selected module */
+  const [methods, setMethods] = useState<Partial<Record<ModuleKey, Method>>>({
+    time: "spreadsheets",
+    talent: "spreadsheets",
+    payroll: "spreadsheets",
+    performance: "spreadsheets",
+    docs: "spreadsheets",
+  });
+
+  /* Step 4: Volumes & frequencies */
+  const [leavePerEmpPerYear, setLeavePerEmpPerYear] = useState<number>(12); // avg 1/month
+  const [timesheetsWeekly, setTimesheetsWeekly] = useState<boolean>(true);   // 4 submits/mo
+  const [hiresPerYear, setHiresPerYear] = useState<number>(Math.round(employees * 0.2));
+  const [payrollRunsPerMonth, setPayrollRunsPerMonth] = useState<number>(1);
+  const [perfCyclesPerYear, setPerfCyclesPerYear] = useState<number>(1);
+  const [docsPerEmpPerYear, setDocsPerEmpPerYear] = useState<number>(3);
+  const [otherSavingsMonthly, setOtherSavingsMonthly] = useState<number>(600);
+
+  /* Pain signals (derived later) */
+
+  /* ----------------------------- Derived Values ---------------------------- */
+
+  /* Cost */
+  const monthlySoftwareCost = useMemo(() => employees * pricePerEmployee, [employees, pricePerEmployee]);
+  const annualSoftwareCost = useMemo(() => monthlySoftwareCost * 12, [monthlySoftwareCost]);
+  const annualTotalCostY1 = useMemo(() => annualSoftwareCost + oneTimeImplementation, [annualSoftwareCost, oneTimeImplementation]);
+
+  /* Volume helpers */
+  const leaveReqsPerMonth = useMemo(() => (employees * leavePerEmpPerYear) / 12, [employees, leavePerEmpPerYear]);
+  const timesheetSubmitsPerMonth = useMemo(() => employees * (timesheetsWeekly ? 4 : 1), [employees, timesheetsWeekly]);
+  const payrollRunsPerYear = useMemo(() => clamp(payrollRunsPerMonth, 1, 4) * 12, [payrollRunsPerMonth]);
+
+  /* Core time saved (in hours/year) per module */
+  const moduleHours = useMemo(() => {
+    const out: Record<ModuleKey, { hrHours: number; mgrHours: number; totalHours: number }> = {
+      time: { hrHours: 0, mgrHours: 0, totalHours: 0 },
+      talent: { hrHours: 0, mgrHours: 0, totalHours: 0 },
+      payroll: { hrHours: 0, mgrHours: 0, totalHours: 0 },
+      performance: { hrHours: 0, mgrHours: 0, totalHours: 0 },
+      docs: { hrHours: 0, mgrHours: 0, totalHours: 0 },
+    };
+
+    const add = (mod: ModuleKey, hours: number) => {
+      const hrH = hours * SPLIT[mod].hr;
+      const mgH = hours * SPLIT[mod].mgr;
+      out[mod].hrHours += hrH;
+      out[mod].mgrHours += mgH;
+      out[mod].totalHours += hours;
+    };
+
+    const sel = (m: ModuleKey) => !!selectedMods[m];
+    const methodOf = (m: ModuleKey): Method | undefined => methods[m];
+
+    // TIME (leave + timesheets)
+    if (sel("time") && methodOf("time")) {
+      const meth = methodOf("time")!;
+      const leaveMinPerReq = TIME_SAVED.time.leavePerReqMin[meth];
+      const timeMinPerSubmit = TIME_SAVED.time.timesheetPerSubmitMin[meth];
+      const leaveHoursYr = (leaveReqsPerMonth * leaveMinPerReq * 12) / 60;
+      const tsHoursYr = (timesheetSubmitsPerMonth * timeMinPerSubmit * 12) / 60;
+      add("time", leaveHoursYr + tsHoursYr);
+    }
+
+    // TALENT (per hire)
+    if (sel("talent") && methodOf("talent")) {
+      const meth = methodOf("talent")!;
+      const minPerHire = TIME_SAVED.talent.perHireMin[meth];
+      const hoursYr = (hiresPerYear * minPerHire) / 60;
+      add("talent", hoursYr);
+    }
+
+    // PAYROLL (per employee per run)
+    if (sel("payroll") && methodOf("payroll")) {
+      const meth = methodOf("payroll")!;
+      const minPerEmpPerRun = TIME_SAVED.payroll.perEmpPerRunMin[meth];
+      const hoursYr = (employees * payrollRunsPerYear * minPerEmpPerRun) / 60;
+      add("payroll", hoursYr);
+    }
+
+    // PERFORMANCE (per manager per month)
+    if (sel("performance") && methodOf("performance")) {
+      const meth = methodOf("performance")!;
+      const hrPerMgrPerMo = TIME_SAVED.performance.perMgrPerMonthHours[meth];
+      const hoursYr = managers * hrPerMgrPerMo * 12 * (perfCyclesPerYear > 0 ? 1 : 0.5); // simple dampening if no formal cycle
+      add("performance", hoursYr);
+    }
+
+    // DOCS (per document)
+    if (sel("docs") && methodOf("docs")) {
+      const meth = methodOf("docs")!;
+      const minPerDoc = TIME_SAVED.docs.perDocMin[meth];
+      const hoursYr = (employees * docsPerEmpPerYear * minPerDoc) / 60;
+      add("docs", hoursYr);
+    }
+
+    return out;
+  }, [
+    selectedMods, methods,
+    employees, managers,
+    leaveReqsPerMonth, timesheetSubmitsPerMonth, hiresPerYear,
+    payrollRunsPerYear, perfCyclesPerYear, docsPerEmpPerYear
+  ]);
+
+  const adminHoursYear = useMemo(
+    () => Object.values(moduleHours).reduce((sum, m) => sum + m.hrHours, 0),
+    [moduleHours]
+  );
+  const managerHoursYear = useMemo(
+    () => Object.values(moduleHours).reduce((sum, m) => sum + m.mgrHours, 0),
+    [moduleHours]
+  );
+
+  const adminSavingsAnnual = useMemo(() => adminHoursYear * hrHourly, [adminHoursYear, hrHourly]);
+  const managerSavingsAnnual = useMemo(() => managerHoursYear * mgrHourly, [managerHoursYear, mgrHourly]);
+  const otherSavingsAnnual = useMemo(() => otherSavingsMonthly * 12, [otherSavingsMonthly]);
+  const totalSavingsAnnual = useMemo(
+    () => adminSavingsAnnual + managerSavingsAnnual + otherSavingsAnnual,
+    [adminSavingsAnnual, managerSavingsAnnual, otherSavingsAnnual]
+  );
+
+  const netBenefitY1 = useMemo(() => totalSavingsAnnual - annualTotalCostY1, [totalSavingsAnnual, annualTotalCostY1]);
+  const netBenefitY2 = useMemo(() => totalSavingsAnnual - annualSoftwareCost, [totalSavingsAnnual, annualSoftwareCost]);
+
+  const roiY1 = useMemo(
+    () => (annualTotalCostY1 <= 0 ? 0 : (netBenefitY1 / annualTotalCostY1) * 100),
+    [netBenefitY1, annualTotalCostY1]
+  );
+  const roiY2 = useMemo(
+    () => (annualSoftwareCost <= 0 ? 0 : (netBenefitY2 / annualSoftwareCost) * 100),
+    [netBenefitY2, annualSoftwareCost]
+  );
+
+  const paybackMonths = useMemo(() => {
+    const monthlyNet = totalSavingsAnnual / 12 - monthlySoftwareCost;
+    if (monthlyNet <= 0) return Infinity;
+    return oneTimeImplementation > 0 ? oneTimeImplementation / monthlyNet : (annualSoftwareCost / totalSavingsAnnual) * 12;
+  }, [totalSavingsAnnual, monthlySoftwareCost, oneTimeImplementation, annualSoftwareCost]);
+
+  /* Pain signals */
+  const painSignals = useMemo(() => {
+    const signals: string[] = [];
+    (Object.keys(MODULES) as ModuleKey[]).forEach((k) => {
+      if (!selectedMods[k]) return;
+      const m = methods[k];
+      if (!m) return;
+      if (m === "manual") signals.push(`${MODULES[k].label}: Manual processes`);
+      if (m === "spreadsheets") signals.push(`${MODULES[k].label}: Spreadsheets & email`);
+      if (m === "multi") signals.push(`${MODULES[k].label}: Too many disconnected tools`);
+      if (k === "payroll" && (m === "manual" || m === "spreadsheets")) signals.push("Payroll: compliance & errors risk");
+      if (k === "performance" && (m === "manual" || m === "spreadsheets")) signals.push("Performance: OKRs/reviews overhead");
+    });
+    return signals.slice(0, 6);
+  }, [selectedMods, methods]);
+
+  /* UI helpers */
+  const card = { border: "2px solid rgba(229,25,67,0.22)", borderRadius: 16, background: "white", boxShadow: "0 8px 24px rgba(0,0,0,0.06)" } as const;
+
+  /* ------------------------------- Render ---------------------------------- */
 
   return (
     <div className="space-y-6">
       {/* Tabs */}
       <div className="flex gap-2 justify-center">
-        <button
-          className={`px-3 py-1.5 rounded-full text-sm ${step===1?"bg-white border":"bg-transparent border-transparent text-gray-500"}`}
-          style={{borderColor:"#e5e7eb"}}
-          onClick={() => setStep(1)}
-        >1. Company & Pricing</button>
-        <button
-          className={`px-3 py-1.5 rounded-full text-sm ${step===2?"bg-white border":"bg-transparent border-transparent text-gray-500"}`}
-          style={{borderColor:"#e5e7eb"}}
-          onClick={() => setStep(2)}
-        >2. Drivers</button>
-        <button
-          className={`px-3 py-1.5 rounded-full text-sm ${step===3?"bg-white border":"bg-transparent border-transparent text-gray-500"}`}
-          style={{borderColor:"#e5e7eb"}}
-          onClick={() => setStep(3)}
-        >3. Results</button>
+        <TabBtn active={step===1} onClick={() => setStep(1)} label="1. Profile" />
+        <TabBtn active={step===2} onClick={() => setStep(2)} label="2. Interests" />
+        <TabBtn active={step===3} onClick={() => setStep(3)} label="3. Current Methods" />
+        <TabBtn active={step===4} onClick={() => setStep(4)} label="4. Volumes" />
+        <TabBtn active={step===5} onClick={() => setStep(5)} label="5. Results" />
       </div>
 
-      {/* Step 1 */}
+      {/* STEP 1: Profile */}
       {step === 1 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="p-6 space-y-4" style={cardBorder}>
-            <h2 className="text-lg font-medium">Company & Pricing</h2>
-            <Row label="Currency">
-              <select
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-left"
-                value={currency}
-                onChange={(e)=>setCurrency(e.target.value)}
-              >
-                <option>EUR</option><option>USD</option><option>GBP</option><option>AUD</option>
+          <div className="p-6 space-y-4" style={card}>
+            <h2 className="text-lg font-medium">Your Profile</h2>
+            <Row label="Job title">
+              <input className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2" value={jobTitle} onChange={(e)=>setJobTitle(e.target.value)} />
+            </Row>
+            <Row label="Industry">
+              <select className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2" value={industry} onChange={(e)=>setIndustry(e.target.value)}>
+                {["Technology","Professional Services","Manufacturing","Retail","Healthcare","Hospitality","Education","Nonprofit"].map(i => <option key={i}>{i}</option>)}
               </select>
             </Row>
-            <Row label="Employees">
-              <input
-                type="number"
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
-                value={employees}
-                onChange={(e)=>setEmployees(Number(e.target.value))}
-                min={1}
-              />
+            <Row label="Currency">
+              <select className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2" value={currency} onChange={(e)=>setCurrency(e.target.value as Currency)}>
+                {(["EUR","USD","GBP","AUD"] as Currency[]).map(c => <option key={c}>{c}</option>)}
+              </select>
             </Row>
           </div>
 
-          <div className="p-6 space-y-4" style={cardBorder}>
-            <h2 className="text-lg font-medium">HR Admin Time (baseline)</h2>
-            <p className="text-sm text-gray-600">We’ll add the detailed sliders after we confirm this build.</p>
+          <div className="p-6 space-y-4" style={card}>
+            <h2 className="text-lg font-medium">Team Size</h2>
+            <Row label="Employees">
+              <input type="number" min={1} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right" value={employees} onChange={(e)=>{const v=Number(e.target.value); setEmployees(v); setManagers(Math.max(1, Math.round(v/10)));}} />
+            </Row>
+            <Row label="Managers">
+              <input type="number" min={1} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right" value={managers} onChange={(e)=>setManagers(Number(e.target.value))} />
+            </Row>
           </div>
 
-          <div className="p-6 space-y-3" style={cardBorder}>
-            <h2 className="text-lg font-medium">At a Glance</h2>
-            <Summary label="Currency">{currency}</Summary>
-            <Summary label="Employees"><strong>{employees}</strong></Summary>
+          <div className="p-6 space-y-4" style={card}>
+            <h2 className="text-lg font-medium">Costs</h2>
+            <Row label={`HR hourly (${currency})`}>
+              <input type="number" min={0} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right" value={hrHourly} onChange={(e)=>setHrHourly(Number(e.target.value))} />
+            </Row>
+            <Row label={`Manager hourly (${currency})`}>
+              <input type="number" min={0} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right" value={mgrHourly} onChange={(e)=>setMgrHourly(Number(e.target.value))} />
+            </Row>
+            <Row label={`Price per employee / month (${currency})`}>
+              <input type="number" min={0} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right" value={pricePerEmployee} onChange={(e)=>setPricePerEmployee(Number(e.target.value))} />
+            </Row>
+            <Row label={`One-time implementation (${currency})`}>
+              <input type="number" min={0} step={100} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right" value={oneTimeImplementation} onChange={(e)=>setOneTimeImplementation(Number(e.target.value))} />
+            </Row>
           </div>
         </div>
       )}
 
-      {/* Step 2 */}
+      {/* STEP 2: Interests */}
       {step === 2 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="p-6 space-y-4" style={cardBorder}>
-            <h2 className="text-lg font-medium">Employee Drivers</h2>
-            <label className="flex items-center gap-3 text-sm">
-              <input type="checkbox" className="h-4 w-4 rounded border-gray-300" />
-              <span className="text-gray-700">Leave requests self-serve</span>
-            </label>
-            <label className="flex items-center gap-3 text-sm">
-              <input type="checkbox" className="h-4 w-4 rounded border-gray-300" />
-              <span className="text-gray-700">Document e-sign templates</span>
-            </label>
-          </div>
+          {(Object.keys(MODULES) as ModuleKey[]).map((k) => (
+            <div key={k} className="p-6 space-y-3" style={card}>
+              <h2 className="text-lg font-medium">{MODULES[k].label}</h2>
+              <p className="text-sm text-gray-600">{MODULES[k].desc}</p>
+              <label className="flex items-center gap-3 text-sm">
+                <input type="checkbox" className="h-4 w-4 rounded border-gray-300"
+                  checked={!!selectedMods[k]}
+                  onChange={(e)=>setSelectedMods(s => ({...s, [k]: e.target.checked}))}
+                />
+                <span className="text-gray-800">Include in ROI</span>
+              </label>
+            </div>
+          ))}
+        </div>
+      )}
 
-          <div className="p-6 space-y-4" style={cardBorder}>
-            <h2 className="text-lg font-medium">Manager Drivers</h2>
-            <label className="flex items-center gap-3 text-sm">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-gray-300"
-                checked={okr}
-                onChange={(e)=>setOkr(e.target.checked)}
-              />
-              <span className="text-gray-700">Managerial OKRs (monthly updates)</span>
-            </label>
-            <p className="text-xs text-gray-600">
-              (This box is ON by default so you can see it working.)
-            </p>
-          </div>
+      {/* STEP 3: Current Methods */}
+      {step === 3 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {(Object.keys(MODULES) as ModuleKey[])
+            .filter(k => selectedMods[k])
+            .map((k) => (
+            <div key={k} className="p-6 space-y-3" style={card}>
+              <h2 className="text-lg font-medium">{MODULES[k].label}</h2>
+              <p className="text-sm text-gray-600">How do you mostly manage this today?</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {(["manual","spreadsheets","multi","basic"] as Method[]).map(m => (
+                  <label key={m} className={`flex gap-3 items-center rounded-xl border px-3 py-2 cursor-pointer ${methods[k]===m?"bg-white":"bg-gray-50"} border-gray-200`}>
+                    <input type="radio" name={`method-${k}`} checked={methods[k]===m} onChange={()=>setMethods(s => ({...s, [k]: m}))} />
+                    <span className="text-sm text-gray-800">{METHOD_LABEL[m]}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
-          <div className="p-6 space-y-4" style={cardBorder}>
+      {/* STEP 4: Volumes */}
+      {step === 4 && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {selectedMods.time && (
+            <div className="p-6 space-y-3" style={card}>
+              <h2 className="text-lg font-medium">Time Management</h2>
+              <Row label="Leave requests per employee / year">
+                <input type="number" min={0} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
+                  value={leavePerEmpPerYear} onChange={(e)=>setLeavePerEmpPerYear(Number(e.target.value))}
+                />
+              </Row>
+              <Row label="Timesheets weekly?">
+                <label className="flex items-center gap-3 text-sm">
+                  <input type="checkbox" className="h-4 w-4" checked={timesheetsWeekly} onChange={(e)=>setTimesheetsWeekly(e.target.checked)} />
+                  <span className="text-gray-700">Weekly submissions (≈4 per month)</span>
+                </label>
+              </Row>
+            </div>
+          )}
+
+          {selectedMods.talent && (
+            <div className="p-6 space-y-3" style={card}>
+              <h2 className="text-lg font-medium">Talent</h2>
+              <Row label="Hires per year">
+                <input type="number" min={0} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
+                  value={hiresPerYear} onChange={(e)=>setHiresPerYear(Number(e.target.value))}
+                />
+              </Row>
+            </div>
+          )}
+
+          {selectedMods.payroll && (
+            <div className="p-6 space-y-3" style={card}>
+              <h2 className="text-lg font-medium">Payroll</h2>
+              <Row label="Payroll runs per month">
+                <input type="number" min={1} max={4} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
+                  value={payrollRunsPerMonth} onChange={(e)=>setPayrollRunsPerMonth(Number(e.target.value))}
+                />
+              </Row>
+            </div>
+          )}
+
+          {selectedMods.performance && (
+            <div className="p-6 space-y-3" style={card}>
+              <h2 className="text-lg font-medium">Performance / OKRs</h2>
+              <Row label="Performance cycles per year">
+                <input type="number" min={0} max={4} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
+                  value={perfCyclesPerYear} onChange={(e)=>setPerfCyclesPerYear(Number(e.target.value))}
+                />
+              </Row>
+            </div>
+          )}
+
+          {selectedMods.docs && (
+            <div className="p-6 space-y-3" style={card}>
+              <h2 className="text-lg font-medium">Documents & e-sign</h2>
+              <Row label="Docs per employee / year">
+                <input type="number" min={0} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
+                  value={docsPerEmpPerYear} onChange={(e)=>setDocsPerEmpPerYear(Number(e.target.value))}
+                />
+              </Row>
+            </div>
+          )}
+
+          <div className="p-6 space-y-3" style={card}>
             <h2 className="text-lg font-medium">Other Savings</h2>
-            <p className="text-sm text-gray-600">We’ll add “Other savings” inputs in the next iteration.</p>
+            <Row label={`Other savings (monthly) (${currency})`}>
+              <input type="number" min={0} step={50} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
+                value={otherSavingsMonthly} onChange={(e)=>setOtherSavingsMonthly(Number(e.target.value))}
+              />
+            </Row>
+            <p className="text-xs text-gray-600">Tool consolidation, reduced errors, avoided fines, overtime reduction, etc.</p>
           </div>
         </div>
       )}
 
-      {/* Step 3 */}
-      {step === 3 && (
+      {/* STEP 5: Results */}
+      {step === 5 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="p-6 space-y-3" style={cardBorder}>
+          <div className="p-6 space-y-3" style={card}>
             <h2 className="text-lg font-medium">Costs</h2>
-            <Summary label="(placeholder)">Coming next</Summary>
+            <Summary label="Software cost (annual)">{fmt(annualSoftwareCost, currency)}</Summary>
+            {oneTimeImplementation > 0 && <Summary label="One-time implementation (Y1)">{fmt(oneTimeImplementation, currency)}</Summary>}
+            <Summary label="Total cost (Y1)"><strong>{fmt(annualTotalCostY1, currency)}</strong></Summary>
           </div>
-          <div className="p-6 space-y-3" style={cardBorder}>
+
+          <div className="p-6 space-y-3" style={card}>
             <h2 className="text-lg font-medium">Savings</h2>
-            <Summary label="(placeholder)">Coming next</Summary>
+            <Summary label="Admin hours saved (annual)">{adminHoursYear.toFixed(0)} h</Summary>
+            <Summary label="Manager hours saved (annual)">{managerHoursYear.toFixed(0)} h</Summary>
+            <div className="h-px bg-gray-200 my-1" />
+            <Summary label="Admin savings (annual)">{fmt(adminSavingsAnnual, currency)}</Summary>
+            <Summary label="Manager savings (annual)">{fmt(managerSavingsAnnual, currency)}</Summary>
+            <Summary label="Other savings (annual)">{fmt(otherSavingsAnnual, currency)}</Summary>
+            <Summary label="Total savings (annual)"><strong>{fmt(totalSavingsAnnual, currency)}</strong></Summary>
           </div>
-          <div className="p-6 space-y-3" style={cardBorder}>
+
+          <div className="p-6 space-y-3" style={card}>
             <h2 className="text-lg font-medium">Outcomes</h2>
-            <Summary label="(placeholder)">Coming next</Summary>
+            <Summary label="Net benefit (Y1)"><strong>{fmt(netBenefitY1, currency)}</strong></Summary>
+            <Summary label="Net benefit (Y2+)"><strong>{fmt(netBenefitY2, currency)}</Summary>
+            <Summary label="ROI (Y1)"><strong>{Number.isFinite(roiY1) ? `${roiY1.toFixed(0)}%` : "—"}</strong></Summary>
+            <Summary label="ROI (Y2+)"><strong>{Number.isFinite(roiY2) ? `${roiY2.toFixed(0)}%` : "—"}</strong></Summary>
+            <Summary label="Payback period"><strong>{Number.isFinite(paybackMonths) ? `${paybackMonths.toFixed(1)} months` : "> 24 months (adjust assumptions)"}</strong></Summary>
+          </div>
+
+          <div className="p-6 lg:col-span-3 space-y-3" style={card}>
+            <h3 className="text-base font-medium">Top Pain Signals</h3>
+            {painSignals.length === 0 ? (
+              <div className="text-sm text-gray-600">No obvious red flags detected. Try marking modules as Manual/Spreadsheets to surface pain.</div>
+            ) : (
+              <ul className="list-disc pl-6 text-sm">
+                {painSignals.map((p, i) => <li key={i}>{p}</li>)}
+              </ul>
+            )}
+            <div className="text-xs text-gray-500">
+              Why: time-saved heuristics are applied per module based on your current method & volumes.
+            </div>
+
+            <div className="pt-2">
+              <button
+                className="px-4 py-2 rounded-2xl text-white"
+                style={{background:"#E51943"}}
+                onClick={() => exportCSV({
+                  stepInputs: {
+                    jobTitle, industry, currency, employees, managers, hrHourly, mgrHourly, pricePerEmployee, oneTimeImplementation,
+                    selectedMods, methods, leavePerEmpPerYear, timesheetsWeekly, hiresPerYear, payrollRunsPerMonth, perfCyclesPerYear, docsPerEmpPerYear, otherSavingsMonthly
+                  },
+                  derived: {
+                    adminHoursYear, managerHoursYear, adminSavingsAnnual, managerSavingsAnnual, otherSavingsAnnual,
+                    totalSavingsAnnual, annualSoftwareCost, annualTotalCostY1, netBenefitY1, netBenefitY2, roiY1, roiY2, paybackMonths
+                  },
+                  painSignals
+                })}
+              >
+                Export CSV
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -145,21 +518,34 @@ export default function FactorialRoiCalculator() {
         >
           ← Back
         </button>
-        <div className="text-xs text-gray-500">Step {step} of 3</div>
+        <div className="text-xs text-gray-500">Step {step} of 5</div>
         <button
           className="px-4 py-2 rounded-2xl text-white"
           style={{background:"#E51943"}}
-          onClick={() => setStep(s => Math.min(3, s + 1))}
-          disabled={step === 3}
+          onClick={() => setStep(s => Math.min(5, s + 1))}
+          disabled={step === 5}
         >
-          {step === 3 ? "Done" : "Next →"}
+          {step === 5 ? "Done" : "Next →"}
         </button>
       </div>
     </div>
   );
 }
 
-/* --- tiny helpers --- */
+/* ------------------------------- UI bits ---------------------------------- */
+
+function TabBtn({ active, onClick, label }: { active: boolean; onClick: () => void; label: string; }) {
+  return (
+    <button
+      className={`px-3 py-1.5 rounded-full text-sm ${active?"bg-white border":"bg-transparent border-transparent text-gray-500"}`}
+      style={{borderColor:"#e5e7eb"}}
+      onClick={onClick}
+    >
+      {label}
+    </button>
+  );
+}
+
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1">
@@ -168,6 +554,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
     </div>
   );
 }
+
 function Summary({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between text-sm py-1">
@@ -175,4 +562,74 @@ function Summary({ label, children }: { label: string; children: React.ReactNode
       <span>{children}</span>
     </div>
   );
+}
+
+/* ----------------------------- CSV Export --------------------------------- */
+
+function exportCSV(data: any) {
+  const rows: Array<[string, string]> = [];
+
+  const pushObj = (prefix: string, obj: Record<string, any>) => {
+    Object.entries(obj).forEach(([k, v]) => rows.push([`${prefix}.${k}`, String(v)]));
+  };
+
+  pushObj("Profile", {
+    JobTitle: data.stepInputs.jobTitle,
+    Industry: data.stepInputs.industry,
+    Currency: data.stepInputs.currency,
+    Employees: data.stepInputs.employees,
+    Managers: data.stepInputs.managers,
+    HRHourly: data.stepInputs.hrHourly,
+    MgrHourly: data.stepInputs.mgrHourly,
+    PricePerEmployee: data.stepInputs.pricePerEmployee,
+    OneTimeImplementation: data.stepInputs.oneTimeImplementation,
+  });
+
+  pushObj("Interests", data.stepInputs.selectedMods);
+  pushObj("Methods", data.stepInputs.methods);
+
+  pushObj("Volumes", {
+    LeavePerEmpPerYear: data.stepInputs.leavePerEmpPerYear,
+    TimesheetsWeekly: data.stepInputs.timesheetsWeekly,
+    HiresPerYear: data.stepInputs.hiresPerYear,
+    PayrollRunsPerMonth: data.stepInputs.payrollRunsPerMonth,
+    PerfCyclesPerYear: data.stepInputs.perfCyclesPerYear,
+    DocsPerEmpPerYear: data.stepInputs.docsPerEmpPerYear,
+    OtherSavingsMonthly: data.stepInputs.otherSavingsMonthly,
+  });
+
+  pushObj("Derived", {
+    AdminHoursYear: Math.round(data.derived.adminHoursYear),
+    ManagerHoursYear: Math.round(data.derived.managerHoursYear),
+    AdminSavingsAnnual: Math.round(data.derived.adminSavingsAnnual),
+    ManagerSavingsAnnual: Math.round(data.derived.managerSavingsAnnual),
+    OtherSavingsAnnual: Math.round(data.derived.otherSavingsAnnual),
+    TotalSavingsAnnual: Math.round(data.derived.totalSavingsAnnual),
+    AnnualSoftwareCost: Math.round(data.derived.annualSoftwareCost),
+    TotalCostY1: Math.round(data.derived.annualTotalCostY1),
+    NetBenefitY1: Math.round(data.derived.netBenefitY1),
+    NetBenefitY2: Math.round(data.derived.netBenefitY2),
+    ROIY1Percent: Math.round(data.derived.roiY1),
+    ROIY2Percent: Math.round(data.derived.roiY2),
+    PaybackMonths: Number.isFinite(data.derived.paybackMonths) ? data.derived.paybackMonths.toFixed(1) : ">24",
+  });
+
+  rows.push(["PainSignals", data.painSignals.join(" | ")]);
+
+  const header = "Metric,Value";
+  const csv = [header, ...rows.map(([k, v]) => `${escapeCsv(k)},${escapeCsv(v)}`)].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "hr-digitisation-roi-questionnaire.csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function escapeCsv(v: string) {
+  const s = String(v ?? "");
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
 }
