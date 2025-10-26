@@ -1,22 +1,25 @@
-import "./globals.css";
-import type { Metadata } from "next";
-import { Fira_Sans } from "next/font/google";
-
-const fira = Fira_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"]
-});
-
-export const metadata: Metadata = {
+export const metadata = {
   title: "HR Digitisation ROI",
-  description: "Estimate payback, savings and ROI.",
-  // favicon auto-detected from app/icon.jpg if you add it
+  description: "Questionnaire-driven ROI model for HR teams",
+  icons: {
+    icon: "/favicon.jpeg",
+    shortcut: "/favicon.jpeg",
+    apple: "/favicon.jpeg",
+  },
+  // If you add the file below in /public, keep this; otherwise delete the line.
+  manifest: "/site.webmanifest",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
-      <body className={fira.className}>{children}</body>
+      <body style={{ background: "#fafafa", color: "#111827" }}>
+        {children}
+      </body>
     </html>
   );
 }
