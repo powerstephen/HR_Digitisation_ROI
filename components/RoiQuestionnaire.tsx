@@ -60,9 +60,13 @@ export default function RoiQuestionnaire() {
   const [pricePerEmployee, setPricePerEmployee] = useState(8);
   const [oneTimeImplementation, setOneTimeImplementation] = useState(0);
 
-  // Step 2: Interests
+  // Step 2: Focus Areas (renamed from Interests)
   const [selectedMods, setSelectedMods] = useState<Record<ModuleKey, boolean>>({
-    time: true, talent: true, payroll: true, performance: true, docs: true,
+    time: true,
+    talent: true,
+    payroll: true,
+    performance: true,
+    docs: true,
   });
 
   // Step 3: Methods
@@ -132,7 +136,10 @@ export default function RoiQuestionnaire() {
     }
     if (sel("performance") && methodOf("performance")) {
       const meth = methodOf("performance") as Method;
-      add("performance", managers * TIME_SAVED.performance.perMgrPerMonthHours[meth] * 12 * (perfCyclesPerYear > 0 ? 1 : 0.5));
+      add(
+        "performance",
+        managers * TIME_SAVED.performance.perMgrPerMonthHours[meth] * 12 * (perfCyclesPerYear > 0 ? 1 : 0.5)
+      );
     }
     if (sel("docs") && methodOf("docs")) {
       const meth = methodOf("docs") as Method;
@@ -140,8 +147,16 @@ export default function RoiQuestionnaire() {
     }
     return out;
   }, [
-    selectedMods, methods, employees, managers, leaveReqsPerMonth,
-    timesheetSubmitsPerMonth, hiresPerYear, payrollRunsPerYear, perfCyclesPerYear, docsPerEmpPerYear
+    selectedMods,
+    methods,
+    employees,
+    managers,
+    leaveReqsPerMonth,
+    timesheetSubmitsPerMonth,
+    hiresPerYear,
+    payrollRunsPerYear,
+    perfCyclesPerYear,
+    docsPerEmpPerYear,
   ]);
 
   const adminHoursYear = useMemo(() => Object.values(moduleHours).reduce((s, m) => s + m.hrHours, 0), [moduleHours]);
@@ -150,20 +165,29 @@ export default function RoiQuestionnaire() {
   const adminSavingsAnnual = useMemo(() => adminHoursYear * hrHourly, [adminHoursYear, hrHourly]);
   const managerSavingsAnnual = useMemo(() => managerHoursYear * mgrHourly, [managerHoursYear, mgrHourly]);
   const otherSavingsAnnual = useMemo(() => otherSavingsMonthly * 12, [otherSavingsMonthly]);
-  const totalSavingsAnnual = useMemo(() => adminSavingsAnnual + managerSavingsAnnual + otherSavingsAnnual, [
-    adminSavingsAnnual, managerSavingsAnnual, otherSavingsAnnual,
-  ]);
+  const totalSavingsAnnual = useMemo(
+    () => adminSavingsAnnual + managerSavingsAnnual + otherSavingsAnnual,
+    [adminSavingsAnnual, managerSavingsAnnual, otherSavingsAnnual]
+  );
 
   const netBenefitY1 = useMemo(() => totalSavingsAnnual - annualTotalCostY1, [totalSavingsAnnual, annualTotalCostY1]);
   const netBenefitY2 = useMemo(() => totalSavingsAnnual - annualSoftwareCost, [totalSavingsAnnual, annualSoftwareCost]);
 
-  const roiY1 = useMemo(() => (annualTotalCostY1 <= 0 ? 0 : (netBenefitY1 / annualTotalCostY1) * 100), [netBenefitY1, annualTotalCostY1]);
-  const roiY2 = useMemo(() => (annualSoftwareCost <= 0 ? 0 : (netBenefitY2 / annualSoftwareCost) * 100), [netBenefitY2, annualSoftwareCost]);
+  const roiY1 = useMemo(
+    () => (annualTotalCostY1 <= 0 ? 0 : (netBenefitY1 / annualTotalCostY1) * 100),
+    [netBenefitY1, annualTotalCostY1]
+  );
+  const roiY2 = useMemo(
+    () => (annualSoftwareCost <= 0 ? 0 : (netBenefitY2 / annualSoftwareCost) * 100),
+    [netBenefitY2, annualSoftwareCost]
+  );
 
   const paybackMonths = useMemo(() => {
     const monthlyNet = totalSavingsAnnual / 12 - monthlySoftwareCost;
     if (monthlyNet <= 0) return Infinity;
-    return oneTimeImplementation > 0 ? oneTimeImplementation / monthlyNet : (annualSoftwareCost / totalSavingsAnnual) * 12;
+    return oneTimeImplementation > 0
+      ? oneTimeImplementation / monthlyNet
+      : (annualSoftwareCost / totalSavingsAnnual) * 12;
   }, [totalSavingsAnnual, monthlySoftwareCost, oneTimeImplementation, annualSoftwareCost]);
 
   const painSignals = useMemo(() => {
@@ -176,7 +200,8 @@ export default function RoiQuestionnaire() {
       if (m === "spreadsheets") s.push(`${MODULES[k].label}: Spreadsheets & email`);
       if (m === "multi") s.push(`${MODULES[k].label}: Too many disconnected tools`);
       if (k === "payroll" && (m === "manual" || m === "spreadsheets")) s.push("Payroll: compliance & errors risk");
-      if (k === "performance" && (m === "manual" || m === "spreadsheets")) s.push("Performance: OKRs/reviews overhead");
+      if (k === "performance" && (m === "manual" || m === "spreadsheets"))
+        s.push("Performance: OKRs/reviews overhead");
     });
     return s.slice(0, 6);
   }, [selectedMods, methods]);
@@ -190,7 +215,8 @@ export default function RoiQuestionnaire() {
 
   const narrativeBullets = useMemo(() => {
     const bullets: string[] = [];
-    if (selectedMods.time) bullets.push("Automate repetitive time tasks (leave, timesheets) with self-service and reminders.");
+    if (selectedMods.time)
+      bullets.push("Automate repetitive time tasks (leave, timesheets) with self-service and reminders.");
     if (selectedMods.talent) bullets.push("Standardize hiring & onboarding with templates and task flows.");
     if (selectedMods.docs) bullets.push("Create a single source of truth with templates and e-sign.");
     if (selectedMods.payroll) bullets.push("Reduce payroll prep & corrections; lower compliance risk.");
@@ -201,11 +227,11 @@ export default function RoiQuestionnaire() {
 
   return (
     <div className="space-y-6">
-      {/* Stepper + progress (red) */}
+      {/* Stepper + progress (active = red background) */}
       <div className="flex flex-col gap-3">
         <div className="flex gap-2 justify-center">
           <TabBtn active={step === 1} onClick={() => setStep(1)} label="1. Profile" />
-          <TabBtn active={step === 2} onClick={() => setStep(2)} label="2. Interests" />
+          <TabBtn active={step === 2} onClick={() => setStep(2)} label="2. Focus Areas" />
           <TabBtn active={step === 3} onClick={() => setStep(3)} label="3. Current Methods" />
           <TabBtn active={step === 4} onClick={() => setStep(4)} label="4. Volumes" />
           <TabBtn active={step === 5} onClick={() => setStep(5)} label="5. Results" />
@@ -336,7 +362,7 @@ export default function RoiQuestionnaire() {
         </div>
       )}
 
-      {/* STEP 2 */}
+      {/* STEP 2 (Focus Areas) */}
       {step === 2 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {(Object.keys(MODULES) as ModuleKey[]).map((k) => (
@@ -510,7 +536,10 @@ export default function RoiQuestionnaire() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Metric label="Total savings (annual)" value={fmt(totalSavingsAnnual, currency)} />
               <Metric label="ROI (Y1)" value={Number.isFinite(roiY1) ? `${roiY1.toFixed(0)}%` : "—"} />
-              <Metric label="Payback period" value={Number.isFinite(paybackMonths) ? `${paybackMonths.toFixed(1)} months` : "> 24 months"} />
+              <Metric
+                label="Payback period"
+                value={Number.isFinite(paybackMonths) ? `${paybackMonths.toFixed(1)} months` : "> 24 months"}
+              />
             </div>
             <ul className="list-disc pl-6 text-sm">
               {narrativeBullets.map((b, i) => (
@@ -658,11 +687,24 @@ export default function RoiQuestionnaire() {
 }
 
 /* UI bits */
-function TabBtn({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
+function TabBtn({
+  active,
+  onClick,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+}) {
   return (
     <button
-      className={`px-3 py-1.5 rounded-full text-sm ${active ? "bg-white border font-medium" : "bg-transparent border-transparent text-gray-600"}`}
-      style={{ borderColor: "#e5e7eb", color: active ? FACTORIAL_RED : undefined }}
+      className="px-3 py-1.5 rounded-full text-sm border"
+      style={{
+        background: active ? FACTORIAL_RED : "transparent",
+        color: active ? "#ffffff" : "#4b5563",
+        borderColor: active ? FACTORIAL_RED : "#e5e7eb",
+        transition: "background 160ms ease, color 160ms ease, border-color 160ms ease",
+      }}
       onClick={onClick}
     >
       {label}
@@ -713,7 +755,8 @@ function exportCSV(data: any) {
     PricePerEmployee: data.stepInputs.pricePerEmployee,
     OneTimeImplementation: data.stepInputs.oneTimeImplementation,
   });
-  pushObj("Interests", data.stepInputs.selectedMods);
+  // Renamed to Focus Areas for consistency
+  pushObj("Focus Areas", data.stepInputs.selectedMods);
   pushObj("Methods", data.stepInputs.methods);
   pushObj("Volumes", {
     LeavePerEmpPerYear: data.stepInputs.leavePerEmpPerYear,
