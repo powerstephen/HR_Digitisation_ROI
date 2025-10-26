@@ -1,7 +1,7 @@
 import dynamic from "next/dynamic";
 
-// 👇 NEW name & path so it can't use an old chunk
-const RoiQuestionnaire = dynamic(() => import("../components/RoiQuestionnaire"), {
+// Force a new chunk: new filename
+const RoiQuestionnaire = dynamic(() => import("../components/RoiQuestionnaireV3"), {
   ssr: false,
 });
 
@@ -10,7 +10,7 @@ export default function Page() {
     <main className="min-h-screen">
       {/* VISUAL MARKER */}
       <div style={{background:"#E51943", color:"white", textAlign:"center", padding:"8px 12px"}}>
-        <strong>QUESTIONNAIRE BUILD v2</strong> — if you can read this, the new code is LIVE
+        <strong>QUESTIONNAIRE BUILD v3 — RED STEPPER</strong>
       </div>
 
       <section className="mx-auto max-w-6xl p-6 md:p-10">
