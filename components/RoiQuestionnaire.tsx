@@ -10,20 +10,12 @@ import { useMemo, useState } from "react";
  * 3) Current Methods (how each module is managed today)
  * 4) Volumes (how often things happen)
  * 5) Results (savings, ROI, payback, pain points, CSV)
- *
- * Design goals:
- * - Opinionated, transparent assumptions with inline comments
- * - Uses inline borders (so brand border is ALWAYS visible)
- * - No charts (kept minimal to avoid build issues); we can add later
  */
-
-/* ---------------------------- Types & Constants ---------------------------- */
 
 type Currency = "EUR" | "USD" | "GBP" | "AUD";
 type ModuleKey = "time" | "talent" | "payroll" | "performance" | "docs";
 type Method = "manual" | "spreadsheets" | "multi" | "basic";
 
-/** Modules shown on Step 2 */
 const MODULES: Record<ModuleKey, { label: string; desc: string }> = {
   time:        { label: "Time Management",     desc: "Leave requests, timesheets, scheduling" },
   talent:      { label: "Talent Management",   desc: "Hiring, onboarding/offboarding" },
@@ -32,7 +24,6 @@ const MODULES: Record<ModuleKey, { label: string; desc: string }> = {
   docs:        { label: "Documents & e-sign",  desc: "Templates, e-signature, document workflows" },
 };
 
-/** Present options for how a module is managed today (Step 3) */
 const METHOD_LABEL: Record<Method, string> = {
   manual: "Manual / Paper",
   spreadsheets: "Spreadsheets & Email",
@@ -40,17 +31,7 @@ const METHOD_LABEL: Record<Method, string> = {
   basic: "Basic HRIS (limited automation)",
 };
 
-/**
- * Time-saved heuristics by module + method.
- * Units:
- *  - time: minutes saved per event (leave request, timesheet submit)
- *  - talent: minutes saved per hire
- *  - payroll: minutes saved per employee per pay-run
- *  - performance: hours saved per manager per month (ongoing)
- *  - docs: minutes saved per document
- *
- * Rationale: manual → spreadsheets → multi → basic HRIS show decreasing waste.
- */
+/** Time-saved heuristics by module + method. */
 const TIME_SAVED = {
   time: {
     leavePerReqMin: { manual: 10, spreadsheets: 7, multi: 5, basic: 3 },
@@ -70,7 +51,7 @@ const TIME_SAVED = {
   },
 } as const;
 
-/** How savings split between HR admin vs Managers (by module) */
+/** Savings split HR vs Managers by module */
 const SPLIT = {
   time:        { hr: 0.7, mgr: 0.3 },
   talent:      { hr: 0.8, mgr: 0.2 },
@@ -79,16 +60,12 @@ const SPLIT = {
   docs:        { hr: 0.7, mgr: 0.3 },
 } as const;
 
-/* ---------------------------- Small Utilities ----------------------------- */
-
 const fmt = (n: number, currency: Currency) =>
   new Intl.NumberFormat(undefined, { style: "currency", currency }).format(n);
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 
-/* -------------------------------- Component -------------------------------- */
-
-export default function FactorialRoiQuestionnaire() {
+export default function RoiQuestionnaire() {
   const [step, setStep] = useState<number>(1);
 
   /* Step 1: Profile */
@@ -107,7 +84,7 @@ export default function FactorialRoiQuestionnaire() {
     time: true, talent: true, payroll: true, performance: true, docs: true,
   });
 
-  /* Step 3: Current Methods per selected module */
+  /* Step 3: Methods */
   const [methods, setMethods] = useState<Partial<Record<ModuleKey, Method>>>({
     time: "spreadsheets",
     talent: "spreadsheets",
@@ -116,20 +93,16 @@ export default function FactorialRoiQuestionnaire() {
     docs: "spreadsheets",
   });
 
-  /* Step 4: Volumes & frequencies */
-  const [leavePerEmpPerYear, setLeavePerEmpPerYear] = useState<number>(12); // avg 1/month
-  const [timesheetsWeekly, setTimesheetsWeekly] = useState<boolean>(true);   // 4 submits/mo
+  /* Step 4: Volumes */
+  const [leavePerEmpPerYear, setLeavePerEmpPerYear] = useState<number>(12);
+  const [timesheetsWeekly, setTimesheetsWeekly] = useState<boolean>(true);
   const [hiresPerYear, setHiresPerYear] = useState<number>(Math.round(employees * 0.2));
   const [payrollRunsPerMonth, setPayrollRunsPerMonth] = useState<number>(1);
   const [perfCyclesPerYear, setPerfCyclesPerYear] = useState<number>(1);
   const [docsPerEmpPerYear, setDocsPerEmpPerYear] = useState<number>(3);
   const [otherSavingsMonthly, setOtherSavingsMonthly] = useState<number>(600);
 
-  /* Pain signals (derived later) */
-
-  /* ----------------------------- Derived Values ---------------------------- */
-
-  /* Cost */
+  /* Costs */
   const monthlySoftwareCost = useMemo(() => employees * pricePerEmployee, [employees, pricePerEmployee]);
   const annualSoftwareCost = useMemo(() => monthlySoftwareCost * 12, [monthlySoftwareCost]);
   const annualTotalCostY1 = useMemo(() => annualSoftwareCost + oneTimeImplementation, [annualSoftwareCost, oneTimeImplementation]);
@@ -139,7 +112,7 @@ export default function FactorialRoiQuestionnaire() {
   const timesheetSubmitsPerMonth = useMemo(() => employees * (timesheetsWeekly ? 4 : 1), [employees, timesheetsWeekly]);
   const payrollRunsPerYear = useMemo(() => clamp(payrollRunsPerMonth, 1, 4) * 12, [payrollRunsPerMonth]);
 
-  /* Core time saved (in hours/year) per module */
+  /* Core time saved (hours/year) per module */
   const moduleHours = useMemo(() => {
     const out: Record<ModuleKey, { hrHours: number; mgrHours: number; totalHours: number }> = {
       time: { hrHours: 0, mgrHours: 0, totalHours: 0 },
@@ -160,7 +133,7 @@ export default function FactorialRoiQuestionnaire() {
     const sel = (m: ModuleKey) => !!selectedMods[m];
     const methodOf = (m: ModuleKey): Method | undefined => methods[m];
 
-    // TIME (leave + timesheets)
+    // TIME
     if (sel("time") && methodOf("time")) {
       const meth = methodOf("time")!;
       const leaveMinPerReq = TIME_SAVED.time.leavePerReqMin[meth];
@@ -170,7 +143,7 @@ export default function FactorialRoiQuestionnaire() {
       add("time", leaveHoursYr + tsHoursYr);
     }
 
-    // TALENT (per hire)
+    // TALENT
     if (sel("talent") && methodOf("talent")) {
       const meth = methodOf("talent")!;
       const minPerHire = TIME_SAVED.talent.perHireMin[meth];
@@ -178,7 +151,7 @@ export default function FactorialRoiQuestionnaire() {
       add("talent", hoursYr);
     }
 
-    // PAYROLL (per employee per run)
+    // PAYROLL
     if (sel("payroll") && methodOf("payroll")) {
       const meth = methodOf("payroll")!;
       const minPerEmpPerRun = TIME_SAVED.payroll.perEmpPerRunMin[meth];
@@ -186,15 +159,15 @@ export default function FactorialRoiQuestionnaire() {
       add("payroll", hoursYr);
     }
 
-    // PERFORMANCE (per manager per month)
+    // PERFORMANCE
     if (sel("performance") && methodOf("performance")) {
       const meth = methodOf("performance")!;
       const hrPerMgrPerMo = TIME_SAVED.performance.perMgrPerMonthHours[meth];
-      const hoursYr = managers * hrPerMgrPerMo * 12 * (perfCyclesPerYear > 0 ? 1 : 0.5); // simple dampening if no formal cycle
+      const hoursYr = managers * hrPerMgrPerMo * 12 * (perfCyclesPerYear > 0 ? 1 : 0.5);
       add("performance", hoursYr);
     }
 
-    // DOCS (per document)
+    // DOCS
     if (sel("docs") && methodOf("docs")) {
       const meth = methodOf("docs")!;
       const minPerDoc = TIME_SAVED.docs.perDocMin[meth];
@@ -245,7 +218,6 @@ export default function FactorialRoiQuestionnaire() {
     return oneTimeImplementation > 0 ? oneTimeImplementation / monthlyNet : (annualSoftwareCost / totalSavingsAnnual) * 12;
   }, [totalSavingsAnnual, monthlySoftwareCost, oneTimeImplementation, annualSoftwareCost]);
 
-  /* Pain signals */
   const painSignals = useMemo(() => {
     const signals: string[] = [];
     (Object.keys(MODULES) as ModuleKey[]).forEach((k) => {
@@ -261,10 +233,7 @@ export default function FactorialRoiQuestionnaire() {
     return signals.slice(0, 6);
   }, [selectedMods, methods]);
 
-  /* UI helpers */
   const card = { border: "2px solid rgba(229,25,67,0.22)", borderRadius: 16, background: "white", boxShadow: "0 8px 24px rgba(0,0,0,0.06)" } as const;
-
-  /* ------------------------------- Render ---------------------------------- */
 
   return (
     <div className="space-y-6">
@@ -466,7 +435,7 @@ export default function FactorialRoiQuestionnaire() {
           <div className="p-6 space-y-3" style={card}>
             <h2 className="text-lg font-medium">Outcomes</h2>
             <Summary label="Net benefit (Y1)"><strong>{fmt(netBenefitY1, currency)}</strong></Summary>
-            <Summary label="Net benefit (Y2+)"><strong>{fmt(netBenefitY2, currency)}</Summary>
+            <Summary label="Net benefit (Y2+)"><strong>{fmt(netBenefitY2, currency)}</strong></Summary>
             <Summary label="ROI (Y1)"><strong>{Number.isFinite(roiY1) ? `${roiY1.toFixed(0)}%` : "—"}</strong></Summary>
             <Summary label="ROI (Y2+)"><strong>{Number.isFinite(roiY2) ? `${roiY2.toFixed(0)}%` : "—"}</strong></Summary>
             <Summary label="Payback period"><strong>{Number.isFinite(paybackMonths) ? `${paybackMonths.toFixed(1)} months` : "> 24 months (adjust assumptions)"}</strong></Summary>
@@ -532,8 +501,6 @@ export default function FactorialRoiQuestionnaire() {
   );
 }
 
-/* ------------------------------- UI bits ---------------------------------- */
-
 function TabBtn({ active, onClick, label }: { active: boolean; onClick: () => void; label: string; }) {
   return (
     <button
@@ -563,8 +530,6 @@ function Summary({ label, children }: { label: string; children: React.ReactNode
     </div>
   );
 }
-
-/* ----------------------------- CSV Export --------------------------------- */
 
 function exportCSV(data: any) {
   const rows: Array<[string, string]> = [];
