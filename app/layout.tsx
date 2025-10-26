@@ -1,16 +1,16 @@
 export const metadata = {
-  title: "HR Digitisation ROI",
+  title: "HR Digitisation — Business Case Builder",
   description: "Questionnaire-driven ROI model for HR teams",
   icons: {
     icon: "/favicon.jpeg",
     shortcut: "/favicon.jpeg",
     apple: "/favicon.jpeg",
   },
-  // If you keep /public/site.webmanifest, keep this line; otherwise remove it
+  // If you don't have /public/site.webmanifest, remove this line.
   manifest: "/site.webmanifest",
 };
 
-import "./globals.css"; // <- ensure Tailwind + global styles load
+import "./globals.css";
 
 export default function RootLayout({
   children,
@@ -19,9 +19,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body style={{ background: "#fafafa", color: "#111827" }}>
-        {children}
-      </body>
+      <body style={{ background: "#fafafa", color: "#111827" }}>{children}</body>
     </html>
   );
 }
