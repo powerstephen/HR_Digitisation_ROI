@@ -1,25 +1,14 @@
 import dynamic from "next/dynamic";
 
-// Import the component you actually have: RoiQuestionnaire.tsx
-const RoiQuestionnaire = dynamic(
-  () => import("../components/RoiQuestionnaire"),
-  { ssr: false }
-);
+// Import the component you have
+const RoiQuestionnaire = dynamic(() => import("../components/RoiQuestionnaire"), {
+  ssr: false,
+});
 
 export default function Page() {
   return (
     <main className="min-h-screen">
-      {/* Visible canary so you know the new build is live */}
-      <div
-        style={{
-          background: "#E51943",
-          color: "white",
-          textAlign: "center",
-          padding: "8px 12px",
-        }}
-      >
-        <strong>QUESTIONNAIRE BUILD — RED STEPPER (matching RoiQuestionnaire.tsx)</strong>
-      </div>
+      {/* (Removed the red banner per your request) */}
 
       <section className="mx-auto max-w-6xl p-6 md:p-10">
         <header className="mb-8 flex items-center justify-between">
@@ -27,9 +16,9 @@ export default function Page() {
             className="text-3xl md:text-4xl font-semibold tracking-tight"
             style={{ color: "#E51943" }}
           >
-            HR Digitisation ROI — Questionnaire
+            HR Digitisation — Business Case Builder
           </h1>
-          {/* Show your favicon as a small logo in the header */}
+          {/* Logo top-right */}
           <img
             src="/favicon.jpeg"
             alt="ROI Demo Logo"
