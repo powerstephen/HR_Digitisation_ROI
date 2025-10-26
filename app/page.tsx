@@ -1,15 +1,15 @@
 import dynamic from "next/dynamic";
 
-// Force a fresh chunk name so you can see the update immediately
+// Import the component you actually have: RoiQuestionnaire.tsx
 const RoiQuestionnaire = dynamic(
-  () => import("../components/RoiQuestionnaireV3"),
+  () => import("../components/RoiQuestionnaire"),
   { ssr: false }
 );
 
 export default function Page() {
   return (
     <main className="min-h-screen">
-      {/* Visual canary so you know the latest build is live */}
+      {/* Visible canary so you know the new build is live */}
       <div
         style={{
           background: "#E51943",
@@ -18,7 +18,7 @@ export default function Page() {
           padding: "8px 12px",
         }}
       >
-        <strong>QUESTIONNAIRE BUILD v3 — RED STEPPER</strong>
+        <strong>QUESTIONNAIRE BUILD — RED STEPPER (matching RoiQuestionnaire.tsx)</strong>
       </div>
 
       <section className="mx-auto max-w-6xl p-6 md:p-10">
@@ -29,7 +29,7 @@ export default function Page() {
           >
             HR Digitisation ROI — Questionnaire
           </h1>
-          {/* Show your favicon as the top-right logo */}
+          {/* Show your favicon as a small logo in the header */}
           <img
             src="/favicon.jpeg"
             alt="ROI Demo Logo"
