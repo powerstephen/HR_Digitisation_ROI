@@ -9,12 +9,14 @@ import { useMemo, useState } from "react";
  * 2) Interests (which modules)
  * 3) Current Methods (how each module is managed today)
  * 4) Volumes (how often things happen)
- * 5) Results (savings, ROI, payback, pain points, CSV)
+ * 5) Results (savings, ROI, payback, pain points, CSV + Headline Summary)
  */
 
 type Currency = "EUR" | "USD" | "GBP" | "AUD";
 type ModuleKey = "time" | "talent" | "payroll" | "performance" | "docs";
 type Method = "manual" | "spreadsheets" | "multi" | "basic";
+
+const FACTORIAL_RED = "#E51943";
 
 const MODULES: Record<ModuleKey, { label: string; desc: string }> = {
   time:        { label: "Time Management",     desc: "Leave requests, timesheets, scheduling" },
@@ -235,15 +237,42 @@ export default function RoiQuestionnaire() {
 
   const card = { border: "2px solid rgba(229,25,67,0.22)", borderRadius: 16, background: "white", boxShadow: "0 8px 24px rgba(0,0,0,0.06)" } as const;
 
+  /* Headline narrative bullets (adapts to selected modules) */
+  const narrativeBullets = useMemo(() => {
+    const bullets: string[] = [];
+    if (selectedMods.time) bullets.push("Automate repetitive time tasks (leave, timesheets) with self-service and reminders.");
+    if (selectedMods.talent) bullets.push("Standardize hiring & onboarding with templates and task flows.");
+    if (selectedMods.docs) bullets.push("Use e-sign & templates for a single source of truth across HR documents.");
+    if (selectedMods.payroll) bullets.push("Reduce payroll prep & corrections; lower compliance risk.");
+    if (selectedMods.performance) bullets.push("Streamline OKRs/reviews so managers spend more time on coaching, not admin.");
+    if (bullets.length < 4) bullets.push("Free your HR team to focus on higher-value, strategic initiatives.");
+    return bullets.slice(0, 5);
+  }, [selectedMods]);
+
+  /* ------------------------------- Render ---------------------------------- */
+
   return (
     <div className="space-y-6">
       {/* Tabs */}
-      <div className="flex gap-2 justify-center">
-        <TabBtn active={step===1} onClick={() => setStep(1)} label="1. Profile" />
-        <TabBtn active={step===2} onClick={() => setStep(2)} label="2. Interests" />
-        <TabBtn active={step===3} onClick={() => setStep(3)} label="3. Current Methods" />
-        <TabBtn active={step===4} onClick={() => setStep(4)} label="4. Volumes" />
-        <TabBtn active={step===5} onClick={() => setStep(5)} label="5. Results" />
+      <div className="flex flex-col gap-3">
+        <div className="flex gap-2 justify-center">
+          <TabBtn active={step===1} onClick={() => setStep(1)} label="1. Profile" />
+          <TabBtn active={step===2} onClick={() => setStep(2)} label="2. Interests" />
+          <TabBtn active={step===3} onClick={() => setStep(3)} label="3. Current Methods" />
+          <TabBtn active={step===4} onClick={() => setStep(4)} label="4. Volumes" />
+          <TabBtn active={step===5} onClick={() => setStep(5)} label="5. Results" />
+        </div>
+        {/* Progress bar in Factorial red */}
+        <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
+          <div
+            className="h-full"
+            style={{
+              width: `${(step/5)*100}%`,
+              background: FACTORIAL_RED,
+              transition: "width 240ms ease",
+            }}
+          />
+        </div>
       </div>
 
       {/* STEP 1: Profile */}
@@ -414,6 +443,19 @@ export default function RoiQuestionnaire() {
       {/* STEP 5: Results */}
       {step === 5 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Headline Summary (NEW) */}
+          <div className="p-6 lg:col-span-3 space-y-3" style={{...card, borderColor: FACTORIAL_RED}}>
+            <h2 className="text-xl font-semibold" style={{color: FACTORIAL_RED}}>Headline Summary</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Metric label="Total savings (annual)" value={fmt(totalSavingsAnnual, currency)} />
+              <Metric label="ROI (Y1)" value={Number.isFinite(roiY1) ? `${roiY1.toFixed(0)}%` : "—"} />
+              <Metric label="Payback period" value={Number.isFinite(paybackMonths) ? `${paybackMonths.toFixed(1)} months` : "> 24 months"} />
+            </div>
+            <ul className="list-disc pl-6 text-sm">
+              {narrativeBullets.map((b, i) => <li key={i}>{b}</li>)}
+            </ul>
+          </div>
+
           <div className="p-6 space-y-3" style={card}>
             <h2 className="text-lg font-medium">Costs</h2>
             <Summary label="Software cost (annual)">{fmt(annualSoftwareCost, currency)}</Summary>
@@ -457,7 +499,7 @@ export default function RoiQuestionnaire() {
             <div className="pt-2">
               <button
                 className="px-4 py-2 rounded-2xl text-white"
-                style={{background:"#E51943"}}
+                style={{background: FACTORIAL_RED}}
                 onClick={() => exportCSV({
                   stepInputs: {
                     jobTitle, industry, currency, employees, managers, hrHourly, mgrHourly, pricePerEmployee, oneTimeImplementation,
@@ -490,7 +532,7 @@ export default function RoiQuestionnaire() {
         <div className="text-xs text-gray-500">Step {step} of 5</div>
         <button
           className="px-4 py-2 rounded-2xl text-white"
-          style={{background:"#E51943"}}
+          style={{background: FACTORIAL_RED}}
           onClick={() => setStep(s => Math.min(5, s + 1))}
           disabled={step === 5}
         >
@@ -501,11 +543,13 @@ export default function RoiQuestionnaire() {
   );
 }
 
+/* ------------------------------- UI bits ---------------------------------- */
+
 function TabBtn({ active, onClick, label }: { active: boolean; onClick: () => void; label: string; }) {
   return (
     <button
-      className={`px-3 py-1.5 rounded-full text-sm ${active?"bg-white border":"bg-transparent border-transparent text-gray-500"}`}
-      style={{borderColor:"#e5e7eb"}}
+      className={`px-3 py-1.5 rounded-full text-sm ${active?"bg-white border font-medium":"bg-transparent border-transparent text-gray-600"}`}
+      style={{borderColor:"#e5e7eb", color: active ? FACTORIAL_RED : undefined}}
       onClick={onClick}
     >
       {label}
@@ -531,6 +575,17 @@ function Summary({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
+function Metric({ label, value }: { label: string; value: string; }) {
+  return (
+    <div className="rounded-xl border border-gray-200 p-4">
+      <div className="text-xs uppercase tracking-wide text-gray-500">{label}</div>
+      <div className="text-2xl font-semibold" style={{color: FACTORIAL_RED}}>{value}</div>
+    </div>
+  );
+}
+
+/* ----------------------------- CSV Export --------------------------------- */
+
 function exportCSV(data: any) {
   const rows: Array<[string, string]> = [];
 
@@ -541,6 +596,7 @@ function exportCSV(data: any) {
   pushObj("Profile", {
     JobTitle: data.stepInputs.jobTitle,
     Industry: data.stepInputs.industry,
+</|endofcursor|>
     Currency: data.stepInputs.currency,
     Employees: data.stepInputs.employees,
     Managers: data.stepInputs.managers,
