@@ -1,0 +1,10 @@
+{
+  "name": "HR Digitisation ROI",
+  "short_name": "ROI",
+  "icons": [
+    { "src": "/favicon.jpeg", "sizes": "256x256", "type": "image/jpeg" }
+  ],
+  "theme_color": "#E51943",
+  "background_color": "#ffffff",
+  "display": "standalone"
+}
