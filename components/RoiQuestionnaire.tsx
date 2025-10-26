@@ -9,11 +9,11 @@ type Method = "manual" | "spreadsheets" | "multi" | "basic";
 const FACTORIAL_RED = "#E51943";
 
 const MODULES: Record<ModuleKey, { label: string; desc: string }> = {
-  time:        { label: "Time Management",     desc: "Leave requests, timesheets, scheduling" },
-  talent:      { label: "Talent Management",   desc: "Hiring, onboarding/offboarding" },
-  payroll:     { label: "Payroll",             desc: "Payroll runs, corrections, compliance" },
-  performance: { label: "Performance/OKRs",    desc: "Goal tracking, reviews, feedback" },
-  docs:        { label: "Documents & e-sign",  desc: "Templates, e-signature, document workflows" },
+  time: { label: "Time Management", desc: "Leave requests, timesheets, scheduling" },
+  talent: { label: "Talent Management", desc: "Hiring, onboarding/offboarding" },
+  payroll: { label: "Payroll", desc: "Payroll runs, corrections, compliance" },
+  performance: { label: "Performance/OKRs", desc: "Goal tracking, reviews, feedback" },
+  docs: { label: "Documents & e-sign", desc: "Templates, e-signature, document workflows" },
 };
 
 const METHOD_LABEL: Record<Method, string> = {
@@ -181,7 +181,12 @@ export default function RoiQuestionnaireV3() {
     return s.slice(0, 6);
   }, [selectedMods, methods]);
 
-  const card = { border: "2px solid rgba(229,25,67,0.22)", borderRadius: 16, background: "white", boxShadow: "0 8px 24px rgba(0,0,0,0.06)" } as const;
+  const card = {
+    border: "2px solid rgba(229,25,67,0.22)",
+    borderRadius: 16,
+    background: "white",
+    boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
+  } as const;
 
   const narrativeBullets = useMemo(() => {
     const bullets: string[] = [];
@@ -199,14 +204,21 @@ export default function RoiQuestionnaireV3() {
       {/* Stepper + progress (red) */}
       <div className="flex flex-col gap-3">
         <div className="flex gap-2 justify-center">
-          <TabBtn active={step===1} onClick={() => setStep(1)} label="1. Profile" />
-          <TabBtn active={step===2} onClick={() => setStep(2)} label="2. Interests" />
-          <TabBtn active={step===3} onClick={() => setStep(3)} label="3. Current Methods" />
-          <TabBtn active={step===4} onClick={() => setStep(4)} label="4. Volumes" />
-          <TabBtn active={step===5} onClick={() => setStep(5)} label="5. Results" />
+          <TabBtn active={step === 1} onClick={() => setStep(1)} label="1. Profile" />
+          <TabBtn active={step === 2} onClick={() => setStep(2)} label="2. Interests" />
+          <TabBtn active={step === 3} onClick={() => setStep(3)} label="3. Current Methods" />
+          <TabBtn active={step === 4} onClick={() => setStep(4)} label="4. Volumes" />
+          <TabBtn active={step === 5} onClick={() => setStep(5)} label="5. Results" />
         </div>
         <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
-          <div className="h-full" style={{ width: `${(step/5)*100}%`, background: FACTORIAL_RED, transition: "width 240ms ease" }} />
+          <div
+            className="h-full"
+            style={{
+              width: `${(step / 5) * 100}%`,
+              background: FACTORIAL_RED,
+              transition: "width 240ms ease",
+            }}
+          />
         </div>
       </div>
 
@@ -216,16 +228,41 @@ export default function RoiQuestionnaireV3() {
           <div className="p-6 space-y-4" style={card}>
             <h2 className="text-lg font-medium">Your Profile</h2>
             <Row label="Job title">
-              <input className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2" value={jobTitle} onChange={(e)=>setJobTitle(e.target.value)} />
+              <input
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2"
+                value={jobTitle}
+                onChange={(e) => setJobTitle(e.target.value)}
+              />
             </Row>
             <Row label="Industry">
-              <select className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2" value={industry} onChange={(e)=>setIndustry(e.target.value)}>
-                {["Technology","Professional Services","Manufacturing","Retail","Healthcare","Hospitality","Education","Nonprofit"].map(i => <option key={i}>{i}</option>)}
+              <select
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2"
+                value={industry}
+                onChange={(e) => setIndustry(e.target.value)}
+              >
+                {[
+                  "Technology",
+                  "Professional Services",
+                  "Manufacturing",
+                  "Retail",
+                  "Healthcare",
+                  "Hospitality",
+                  "Education",
+                  "Nonprofit",
+                ].map((i) => (
+                  <option key={i}>{i}</option>
+                ))}
               </select>
             </Row>
             <Row label="Currency">
-              <select className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2" value={currency} onChange={(e)=>setCurrency(e.target.value as Currency)}>
-                {(["EUR","USD","GBP","AUD"] as Currency[]).map(c => <option key={c}>{c}</option>)}
+              <select
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2"
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value as Currency)}
+              >
+                {(["EUR", "USD", "GBP", "AUD"] as Currency[]).map((c) => (
+                  <option key={c}>{c}</option>
+                ))}
               </select>
             </Row>
           </div>
@@ -233,33 +270,67 @@ export default function RoiQuestionnaireV3() {
           <div className="p-6 space-y-4" style={card}>
             <h2 className="text-lg font-medium">Team Size</h2>
             <Row label="Employees">
-              <input type="number" min={1} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
+              <input
+                type="number"
+                min={1}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
                 value={employees}
-                onChange={(e)=>{const v=Number(e.target.value); setEmployees(v); setManagers(Math.max(1, Math.round(v/10)));}} />
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setEmployees(v);
+                  setManagers(Math.max(1, Math.round(v / 10)));
+                }}
+              />
             </Row>
             <Row label="Managers">
-              <input type="number" min={1} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
-                value={managers} onChange={(e)=>setManagers(Number(e.target.value))} />
+              <input
+                type="number"
+                min={1}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
+                value={managers}
+                onChange={(e) => setManagers(Number(e.target.value))}
+              />
             </Row>
           </div>
 
           <div className="p-6 space-y-4" style={card}>
             <h2 className="text-lg font-medium">Costs</h2>
             <Row label={`HR hourly (${currency})`}>
-              <input type="number" min={0} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
-                value={hrHourly} onChange={(e)=>setHrHourly(Number(e.target.value))} />
+              <input
+                type="number"
+                min={0}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
+                value={hrHourly}
+                onChange={(e) => setHrHourly(Number(e.target.value))}
+              />
             </Row>
             <Row label={`Manager hourly (${currency})`}>
-              <input type="number" min={0} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
-                value={mgrHourly} onChange={(e)=>setMgrHourly(Number(e.target.value))} />
+              <input
+                type="number"
+                min={0}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
+                value={mgrHourly}
+                onChange={(e) => setMgrHourly(Number(e.target.value))}
+              />
             </Row>
             <Row label={`Price per employee / month (${currency})`}>
-              <input type="number" min={0} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
-                value={pricePerEmployee} onChange={(e)=>setPricePerEmployee(Number(e.target.value))} />
+              <input
+                type="number"
+                min={0}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
+                value={pricePerEmployee}
+                onChange={(e) => setPricePerEmployee(Number(e.target.value))}
+              />
             </Row>
             <Row label={`One-time implementation (${currency})`}>
-              <input type="number" min={0} step={100} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
-                value={oneTimeImplementation} onChange={(e)=>setOneTimeImplementation(Number(e.target.value))} />
+              <input
+                type="number"
+                min={0}
+                step={100}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
+                value={oneTimeImplementation}
+                onChange={(e) => setOneTimeImplementation(Number(e.target.value))}
+              />
             </Row>
           </div>
         </div>
@@ -273,9 +344,12 @@ export default function RoiQuestionnaireV3() {
               <h2 className="text-lg font-medium">{MODULES[k].label}</h2>
               <p className="text-sm text-gray-600">{MODULES[k].desc}</p>
               <label className="flex items-center gap-3 text-sm">
-                <input type="checkbox" className="h-4 w-4 rounded border-gray-300"
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300"
                   checked={!!selectedMods[k]}
-                  onChange={(e)=>setSelectedMods(s => ({...s, [k]: e.target.checked}))}/>
+                  onChange={(e) => setSelectedMods((s) => ({ ...s, [k]: e.target.checked }))}
+                />
                 <span className="text-gray-800">Include in ROI</span>
               </label>
             </div>
@@ -287,21 +361,31 @@ export default function RoiQuestionnaireV3() {
       {step === 3 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {(Object.keys(MODULES) as ModuleKey[])
-            .filter(k => selectedMods[k])
+            .filter((k) => selectedMods[k])
             .map((k) => (
-            <div key={k} className="p-6 space-y-3" style={card}>
-              <h2 className="text-lg font-medium">{MODULES[k].label}</h2>
-              <p className="text-sm text-gray-600">How do you mostly manage this today?</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {(["manual","spreadsheets","multi","basic"] as Method[]).map(m => (
-                  <label key={m} className={`flex gap-3 items-center rounded-xl border px-3 py-2 cursor-pointer ${methods[k]===m?"bg-white":"bg-gray-50"} border-gray-200`}>
-                    <input type="radio" name={`method-${k}`} checked={methods[k]===m} onChange={()=>setMethods(s => ({...s, [k]: m}))} />
-                    <span className="text-sm text-gray-800">{METHOD_LABEL[m]}</span>
-                  </label>
-                ))}
+              <div key={k} className="p-6 space-y-3" style={card}>
+                <h2 className="text-lg font-medium">{MODULES[k].label}</h2>
+                <p className="text-sm text-gray-600">How do you mostly manage this today?</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {(["manual", "spreadsheets", "multi", "basic"] as Method[]).map((m) => (
+                    <label
+                      key={m}
+                      className={`flex gap-3 items-center rounded-xl border px-3 py-2 cursor-pointer ${
+                        methods[k] === m ? "bg-white" : "bg-gray-50"
+                      } border-gray-200`}
+                    >
+                      <input
+                        type="radio"
+                        name={`method-${k}`}
+                        checked={methods[k] === m}
+                        onChange={() => setMethods((s) => ({ ...s, [k]: m }))}
+                      />
+                      <span className="text-sm text-gray-800">{METHOD_LABEL[m]}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       )}
 
@@ -312,12 +396,22 @@ export default function RoiQuestionnaireV3() {
             <div className="p-6 space-y-3" style={card}>
               <h2 className="text-lg font-medium">Time Management</h2>
               <Row label="Leave requests per employee / year">
-                <input type="number" min={0} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
-                  value={leavePerEmpPerYear} onChange={(e)=>setLeavePerEmpPerYear(Number(e.target.value))}/>
+                <input
+                  type="number"
+                  min={0}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
+                  value={leavePerEmpPerYear}
+                  onChange={(e) => setLeavePerEmpPerYear(Number(e.target.value))}
+                />
               </Row>
               <Row label="Timesheets weekly?">
                 <label className="flex items-center gap-3 text-sm">
-                  <input type="checkbox" className="h-4 w-4" checked={timesheetsWeekly} onChange={(e)=>setTimesheetsWeekly(e.target.checked)}/>
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4"
+                    checked={timesheetsWeekly}
+                    onChange={(e) => setTimesheetsWeekly(e.target.checked)}
+                  />
                   <span className="text-gray-700">Weekly submissions (≈4 per month)</span>
                 </label>
               </Row>
@@ -328,8 +422,13 @@ export default function RoiQuestionnaireV3() {
             <div className="p-6 space-y-3" style={card}>
               <h2 className="text-lg font-medium">Talent</h2>
               <Row label="Hires per year">
-                <input type="number" min={0} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
-                  value={hiresPerYear} onChange={(e)=>setHiresPerYear(Number(e.target.value))}/>
+                <input
+                  type="number"
+                  min={0}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
+                  value={hiresPerYear}
+                  onChange={(e) => setHiresPerYear(Number(e.target.value))}
+                />
               </Row>
             </div>
           )}
@@ -338,8 +437,14 @@ export default function RoiQuestionnaireV3() {
             <div className="p-6 space-y-3" style={card}>
               <h2 className="text-lg font-medium">Payroll</h2>
               <Row label="Payroll runs per month">
-                <input type="number" min={1} max={4} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
-                  value={payrollRunsPerMonth} onChange={(e)=>setPayrollRunsPerMonth(Number(e.target.value))}/>
+                <input
+                  type="number"
+                  min={1}
+                  max={4}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
+                  value={payrollRunsPerMonth}
+                  onChange={(e) => setPayrollRunsPerMonth(Number(e.target.value))}
+                />
               </Row>
             </div>
           )}
@@ -348,8 +453,14 @@ export default function RoiQuestionnaireV3() {
             <div className="p-6 space-y-3" style={card}>
               <h2 className="text-lg font-medium">Performance / OKRs</h2>
               <Row label="Performance cycles per year">
-                <input type="number" min={0} max={4} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
-                  value={perfCyclesPerYear} onChange={(e)=>setPerfCyclesPerYear(Number(e.target.value))}/>
+                <input
+                  type="number"
+                  min={0}
+                  max={4}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
+                  value={perfCyclesPerYear}
+                  onChange={(e) => setPerfCyclesPerYear(Number(e.target.value))}
+                />
               </Row>
             </div>
           )}
@@ -358,8 +469,13 @@ export default function RoiQuestionnaireV3() {
             <div className="p-6 space-y-3" style={card}>
               <h2 className="text-lg font-medium">Documents & e-sign</h2>
               <Row label="Docs per employee / year">
-                <input type="number" min={0} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
-                  value={docsPerEmpPerYear} onChange={(e)=>setDocsPerEmpPerYear(Number(e.target.value))}/>
+                <input
+                  type="number"
+                  min={0}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
+                  value={docsPerEmpPerYear}
+                  onChange={(e) => setDocsPerEmpPerYear(Number(e.target.value))}
+                />
               </Row>
             </div>
           )}
@@ -367,10 +483,18 @@ export default function RoiQuestionnaireV3() {
           <div className="p-6 space-y-3" style={card}>
             <h2 className="text-lg font-medium">Other Savings</h2>
             <Row label={`Other savings (monthly) (${currency})`}>
-              <input type="number" min={0} step={50} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
-                value={otherSavingsMonthly} onChange={(e)=>setOtherSavingsMonthly(Number(e.target.value))}/>
+              <input
+                type="number"
+                min={0}
+                step={50}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-right"
+                value={otherSavingsMonthly}
+                onChange={(e) => setOtherSavingsMonthly(Number(e.target.value))}
+              />
             </Row>
-            <p className="text-xs text-gray-600">Tool consolidation, reduced errors, avoided fines, overtime reduction, etc.</p>
+            <p className="text-xs text-gray-600">
+              Tool consolidation, reduced errors, avoided fines, overtime reduction, etc.
+            </p>
           </div>
         </div>
       )}
@@ -379,23 +503,31 @@ export default function RoiQuestionnaireV3() {
       {step === 5 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Headline Summary */}
-          <div className="p-6 lg:col-span-3 space-y-3" style={{...card, borderColor: FACTORIAL_RED}}>
-            <h2 className="text-xl font-semibold" style={{color: FACTORIAL_RED}}>Headline Summary</h2>
+          <div className="p-6 lg:col-span-3 space-y-3" style={{ ...card, borderColor: FACTORIAL_RED }}>
+            <h2 className="text-xl font-semibold" style={{ color: FACTORIAL_RED }}>
+              Headline Summary
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Metric label="Total savings (annual)" value={fmt(totalSavingsAnnual, currency)} />
               <Metric label="ROI (Y1)" value={Number.isFinite(roiY1) ? `${roiY1.toFixed(0)}%` : "—"} />
               <Metric label="Payback period" value={Number.isFinite(paybackMonths) ? `${paybackMonths.toFixed(1)} months` : "> 24 months"} />
             </div>
             <ul className="list-disc pl-6 text-sm">
-              {narrativeBullets.map((b, i) => <li key={i}>{b}</li>)}
+              {narrativeBullets.map((b, i) => (
+                <li key={i}>{b}</li>
+              ))}
             </ul>
           </div>
 
           <div className="p-6 space-y-3" style={card}>
             <h2 className="text-lg font-medium">Costs</h2>
             <Summary label="Software cost (annual)">{fmt(annualSoftwareCost, currency)}</Summary>
-            {oneTimeImplementation > 0 && <Summary label="One-time implementation (Y1)">{fmt(oneTimeImplementation, currency)}</Summary>}
-            <Summary label="Total cost (Y1)"><strong>{fmt(annualTotalCostY1, currency)}</strong></Summary>
+            {oneTimeImplementation > 0 && (
+              <Summary label="One-time implementation (Y1)">{fmt(oneTimeImplementation, currency)}</Summary>
+            )}
+            <Summary label="Total cost (Y1)">
+              <strong>{fmt(annualTotalCostY1, currency)}</strong>
+            </Summary>
           </div>
 
           <div className="p-6 space-y-3" style={card}>
@@ -406,25 +538,43 @@ export default function RoiQuestionnaireV3() {
             <Summary label="Admin savings (annual)">{fmt(adminSavingsAnnual, currency)}</Summary>
             <Summary label="Manager savings (annual)">{fmt(managerSavingsAnnual, currency)}</Summary>
             <Summary label="Other savings (annual)">{fmt(otherSavingsAnnual, currency)}</Summary>
-            <Summary label="Total savings (annual)"><strong>{fmt(totalSavingsAnnual, currency)}</strong></Summary>
+            <Summary label="Total savings (annual)">
+              <strong>{fmt(totalSavingsAnnual, currency)}</strong>
+            </Summary>
           </div>
 
           <div className="p-6 space-y-3" style={card}>
             <h2 className="text-lg font-medium">Outcomes</h2>
-            <Summary label="Net benefit (Y1)"><strong>{fmt(netBenefitY1, currency)}</strong></Summary>
-            <Summary label="Net benefit (Y2+)"><strong>{fmt(netBenefitY2, currency)}</strong></Summary>
-            <Summary label="ROI (Y1)"><strong>{Number.isFinite(roiY1) ? `${roiY1.toFixed(0)}%` : "—"}</strong></Summary>
-            <Summary label="ROI (Y2+)"><strong>{Number.isFinite(roiY2) ? `${roiY2.toFixed(0)}%` : "—"}</strong></Summary>
-            <Summary label="Payback period"><strong>{Number.isFinite(paybackMonths) ? `${paybackMonths.toFixed(1)} months` : "> 24 months (adjust assumptions)"}</strong></Summary>
+            <Summary label="Net benefit (Y1)">
+              <strong>{fmt(netBenefitY1, currency)}</strong>
+            </Summary>
+            <Summary label="Net benefit (Y2+)">
+              <strong>{fmt(netBenefitY2, currency)}</strong>
+            </Summary>
+            <Summary label="ROI (Y1)">
+              <strong>{Number.isFinite(roiY1) ? `${roiY1.toFixed(0)}%` : "—"}</strong>
+            </Summary>
+            <Summary label="ROI (Y2+)">
+              <strong>{Number.isFinite(roiY2) ? `${roiY2.toFixed(0)}%` : "—"}</strong>
+            </Summary>
+            <Summary label="Payback period">
+              <strong>
+                {Number.isFinite(paybackMonths) ? `${paybackMonths.toFixed(1)} months` : "> 24 months (adjust assumptions)"}
+              </strong>
+            </Summary>
           </div>
 
           <div className="p-6 lg:col-span-3 space-y-3" style={card}>
             <h3 className="text-base font-medium">Top Pain Signals</h3>
             {painSignals.length === 0 ? (
-              <div className="text-sm text-gray-600">No obvious red flags detected. Try marking modules as Manual/Spreadsheets to surface pain.</div>
+              <div className="text-sm text-gray-600">
+                No obvious red flags detected. Try marking modules as Manual/Spreadsheets to surface pain.
+              </div>
             ) : (
               <ul className="list-disc pl-6 text-sm">
-                {painSignals.map((p, i) => <li key={i}>{p}</li>)}
+                {painSignals.map((p, i) => (
+                  <li key={i}>{p}</li>
+                ))}
               </ul>
             )}
             <div className="text-xs text-gray-500">
@@ -432,17 +582,49 @@ export default function RoiQuestionnaireV3() {
             </div>
 
             <div className="pt-2">
-              <button className="px-4 py-2 rounded-2xl text-white" style={{background: FACTORIAL_RED}}
-                onClick={() => exportCSV({ stepInputs: {
-                    jobTitle, industry, currency, employees, managers, hrHourly, mgrHourly, pricePerEmployee, oneTimeImplementation,
-                    selectedMods, methods, leavePerEmpPerYear, timesheetsWeekly, hiresPerYear, payrollRunsPerMonth, perfCyclesPerYear, docsPerEmpPerYear, otherSavingsMonthly
-                  },
-                  derived: {
-                    adminHoursYear, managerHoursYear, adminSavingsAnnual, managerSavingsAnnual, otherSavingsAnnual,
-                    totalSavingsAnnual, annualSoftwareCost, annualTotalCostY1, netBenefitY1, netBenefitY2, roiY1, roiY2, paybackMonths
-                  },
-                  painSignals
-                })}
+              <button
+                className="px-4 py-2 rounded-2xl text-white"
+                style={{ background: FACTORIAL_RED }}
+                onClick={() =>
+                  exportCSV({
+                    stepInputs: {
+                      jobTitle,
+                      industry,
+                      currency,
+                      employees,
+                      managers,
+                      hrHourly,
+                      mgrHourly,
+                      pricePerEmployee,
+                      oneTimeImplementation,
+                      selectedMods,
+                      methods,
+                      leavePerEmpPerYear,
+                      timesheetsWeekly,
+                      hiresPerYear,
+                      payrollRunsPerMonth,
+                      perfCyclesPerYear,
+                      docsPerEmpPerYear,
+                      otherSavingsMonthly,
+                    },
+                    derived: {
+                      adminHoursYear,
+                      managerHoursYear,
+                      adminSavingsAnnual,
+                      managerSavingsAnnual,
+                      otherSavingsAnnual,
+                      totalSavingsAnnual,
+                      annualSoftwareCost,
+                      annualTotalCostY1,
+                      netBenefitY1,
+                      netBenefitY2,
+                      roiY1,
+                      roiY2,
+                      paybackMonths,
+                    },
+                    painSignals,
+                  })
+                }
               >
                 Export CSV
               </button>
@@ -453,22 +635,34 @@ export default function RoiQuestionnaireV3() {
 
       {/* Footer nav */}
       <div className="flex items-center justify-between">
-        <button className="px-4 py-2 rounded-2xl" style={{background:"transparent", color:"#111827", border:"1px solid #e5e7eb"}}
-          onClick={() => setStep(s => Math.max(1, s - 1))} disabled={step === 1}>← Back</button>
+        <button
+          className="px-4 py-2 rounded-2xl"
+          style={{ background: "transparent", color: "#111827", border: "1px solid #e5e7eb" }}
+          onClick={() => setStep((s) => Math.max(1, s - 1))}
+          disabled={step === 1}
+        >
+          ← Back
+        </button>
         <div className="text-xs text-gray-500">Step {step} of 5</div>
-        <button className="px-4 py-2 rounded-2xl text-white" style={{background: FACTORIAL_RED}}
-          onClick={() => setStep(s => Math.min(5, s + 1))} disabled={step === 5}>{step === 5 ? "Done" : "Next →"}</button>
+        <button
+          className="px-4 py-2 rounded-2xl text-white"
+          style={{ background: FACTORIAL_RED }}
+          onClick={() => setStep((s) => Math.min(5, s + 1))}
+          disabled={step === 5}
+        >
+          {step === 5 ? "Done" : "Next →"}
+        </button>
       </div>
     </div>
   );
 }
 
 /* UI bits */
-function TabBtn({ active, onClick, label }: { active: boolean; onClick: () => void; label: string; }) {
+function TabBtn({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
   return (
     <button
-      className={`px-3 py-1.5 rounded-full text-sm ${active?"bg-white border font-medium":"bg-transparent border-transparent text-gray-600"}`}
-      style={{borderColor:"#e5e7eb", color: active ? FACTORIAL_RED : undefined}}
+      className={`px-3 py-1.5 rounded-full text-sm ${active ? "bg-white border font-medium" : "bg-transparent border-transparent text-gray-600"}`}
+      style={{ borderColor: "#e5e7eb", color: active ? FACTORIAL_RED : undefined }}
       onClick={onClick}
     >
       {label}
@@ -491,11 +685,13 @@ function Summary({ label, children }: { label: string; children: React.ReactNode
     </div>
   );
 }
-function Metric({ label, value }: { label: string; value: string; }) {
+function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-gray-200 p-4">
       <div className="text-xs uppercase tracking-wide text-gray-500">{label}</div>
-      <div className="text-2xl font-semibold" style={{color: FACTORIAL_RED}}>{value}</div>
+      <div className="text-2xl font-semibold" style={{ color: FACTORIAL_RED }}>
+        {value}
+      </div>
     </div>
   );
 }
